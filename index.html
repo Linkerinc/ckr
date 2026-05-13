@@ -8,46 +8,25 @@
 <meta name="theme-color" content="#7C2D12" />
 <title>장인어른 · 장모님 칠순여행 준비 보드</title>
 
-<!-- Pretendard 폰트 -->
 <link rel="stylesheet" as="style" crossorigin
   href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.min.css" />
 
-<!-- React 18 -->
 <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
 <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-
-<!-- Babel for in-browser JSX -->
 <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
-<!-- Firebase 9.x compat -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <style>
   * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  html, body {
-    margin: 0; padding: 0;
-    font-family: 'Pretendard Variable', Pretendard, -apple-system, 'Noto Sans KR', sans-serif;
-    -webkit-font-smoothing: antialiased;
-    overscroll-behavior-y: none;
-    color: #1F2937;
-  }
+  html, body { margin: 0; padding: 0; font-family: 'Pretendard Variable', Pretendard, -apple-system, 'Noto Sans KR', sans-serif; -webkit-font-smoothing: antialiased; overscroll-behavior-y: none; color: #1F2937; }
   button, input, select, textarea { font-family: inherit; }
   select:focus, button:focus, textarea:focus, input:focus { outline: 2px solid #7C2D12; outline-offset: 2px; }
-
   @keyframes fly { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-10px) rotate(15deg); } }
   @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
   @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
-
-  @media print {
-    header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    button, select { display: none !important; }
-  }
-
-  /* 모바일 최적화 */
-  @media (max-width: 640px) {
-    .desktop-only { display: none !important; }
-  }
+  @media print { header { -webkit-print-color-adjust: exact; print-color-adjust: exact; } button, select { display: none !important; } }
+  @media (max-width: 640px) { .desktop-only { display: none !important; } }
 </style>
 </head>
 <body>
@@ -57,7 +36,7 @@
 const { useState, useEffect, useMemo, useRef } = React;
 
 // ═══════════════════════════════════════════════════════════════════
-// ⚙️  Firebase 설정 — 여기에 본인의 Firebase 프로젝트 정보를 입력하세요
+// ⚙️ Firebase 설정 — 여기에 본인의 Firebase 프로젝트 정보를 입력하세요
 // ═══════════════════════════════════════════════════════════════════
 const FIREBASE_CONFIG = {
   apiKey: "AIzaSyDWbv-wIcHeQEGNfnRpjQOHouv499SyOvg",
@@ -68,20 +47,19 @@ const FIREBASE_CONFIG = {
   messagingSenderId: "611040163148",
   appId: "1:611040163148:web:b78983dbdbfbff4cedcbe9"
 };
-
-// 데이터 경로 (여러 여행 보드를 만들 거면 여기를 바꾸세요)
 const TRIP_KEY = 'chilsoon-trip-2026';
 
 // ═══════════════════════════════════════════════════════════════════
 // 기본 데이터
 // ═══════════════════════════════════════════════════════════════════
-const DEPARTURE_DATE = new Date('2026-11-17T11:30:00+09:00');
+const DEFAULT_TRIP_INFO = {
+  departureDate: '2026-11-17',
+  destinationName: '큐슈 3박 4일',
+  destinationSub: '벳부·유후인·후쿠오카',
+  regionLabel: 'JAPAN AUTUMN 2026 · KYUSHU',
+};
 
-const COLOR_PALETTE = [
-  '#8B2C20', '#C2410C', '#1E40AF', '#9D174D', '#15803D',
-  '#7C3AED', '#DB2777', '#0891B2', '#B45309', '#0F766E'
-];
-
+const COLOR_PALETTE = ['#8B2C20', '#C2410C', '#1E40AF', '#9D174D', '#15803D', '#7C3AED', '#DB2777', '#0891B2', '#B45309', '#0F766E'];
 const ICON_OPTIONS = ['👨', '👩', '👴', '👵', '🧑', '👧', '👦', '🧓', '🙋', '👨‍💼', '👩‍💼', '🧔', '👱', '🤵', '🥻', '🎓'];
 
 const DEFAULT_MEMBERS = [
@@ -94,34 +72,34 @@ const DEFAULT_MEMBERS = [
 ];
 
 const PHASES = [
-  { id: 'p1', name: 'Phase 1', label: '5월', subtitle: '계획 확정·여권 점검', dMin: 180, dMax: 200, color: '#7C2D12', bg: '#FEF3C7' },
-  { id: 'p2', name: 'Phase 2', label: '6월', subtitle: '여권 발급·갱신', dMin: 150, dMax: 179, color: '#9A3412', bg: '#FED7AA' },
-  { id: 'p3', name: 'Phase 3', label: '7월', subtitle: '상품 일정 확인', dMin: 120, dMax: 149, color: '#C2410C', bg: '#FFEDD5' },
-  { id: 'p4', name: 'Phase 4', label: '8월', subtitle: '예약·결제 (가장 중요)', dMin: 90, dMax: 119, color: '#DC2626', bg: '#FECACA' },
-  { id: 'p5', name: 'Phase 5', label: '9월', subtitle: '카드·보험·쇼핑', dMin: 60, dMax: 89, color: '#B91C1C', bg: '#FEE2E2' },
-  { id: 'p6', name: 'Phase 6', label: '10월 초중순', subtitle: '환전·짐 준비', dMin: 30, dMax: 59, color: '#A16207', bg: '#FEF3C7' },
-  { id: 'p7', name: 'Phase 7', label: '10월 말', subtitle: '와이파이·짐 패킹', dMin: 15, dMax: 29, color: '#854D0E', bg: '#FDE68A' },
-  { id: 'p8', name: 'Phase 8', label: '11월 초', subtitle: '비짓재팬·최종 점검', dMin: 7, dMax: 14, color: '#7C2D12', bg: '#FED7AA' },
-  { id: 'p9', name: 'Phase 9', label: '출발 직전', subtitle: '마지막 준비', dMin: 1, dMax: 6, color: '#991B1B', bg: '#FCA5A5' },
-  { id: 'p10', name: 'D-DAY', label: '11월 17일', subtitle: '출발!', dMin: -10, dMax: 0, color: '#1F2937', bg: '#FDE68A' },
+  { id: 'p1', name: 'Phase 1', subtitle: '계획 확정·여권 점검', dMin: 180, dMax: 200, color: '#7C2D12', bg: '#FEF3C7' },
+  { id: 'p2', name: 'Phase 2', subtitle: '여권 발급·갱신', dMin: 150, dMax: 179, color: '#9A3412', bg: '#FED7AA' },
+  { id: 'p3', name: 'Phase 3', subtitle: '상품 일정 확인', dMin: 120, dMax: 149, color: '#C2410C', bg: '#FFEDD5' },
+  { id: 'p4', name: 'Phase 4', subtitle: '예약·결제 (가장 중요)', dMin: 90, dMax: 119, color: '#DC2626', bg: '#FECACA' },
+  { id: 'p5', name: 'Phase 5', subtitle: '카드·보험·쇼핑', dMin: 60, dMax: 89, color: '#B91C1C', bg: '#FEE2E2' },
+  { id: 'p6', name: 'Phase 6', subtitle: '환전·짐 준비', dMin: 30, dMax: 59, color: '#A16207', bg: '#FEF3C7' },
+  { id: 'p7', name: 'Phase 7', subtitle: '와이파이·짐 패킹', dMin: 15, dMax: 29, color: '#854D0E', bg: '#FDE68A' },
+  { id: 'p8', name: 'Phase 8', subtitle: '비짓재팬·최종 점검', dMin: 7, dMax: 14, color: '#7C2D12', bg: '#FED7AA' },
+  { id: 'p9', name: 'Phase 9', subtitle: '출발 직전', dMin: 1, dMax: 6, color: '#991B1B', bg: '#FCA5A5' },
+  { id: 'p10', name: 'D-DAY', subtitle: '출발!', dMin: -10, dMax: 0, color: '#1F2937', bg: '#FDE68A' },
 ];
 
 const DEFAULT_TASKS = [
-  { id: 't1-1', phase: 'p1', title: '가족 회의 — 여행 시기와 예산 합의', detail: '11월 17일(화)~20일(금) 출발 / 2인 총 약 320~420만원 합의', defaultAssignee: 'sawi', priority: 'high' },
+  { id: 't1-1', phase: 'p1', title: '가족 회의 — 여행 시기와 예산 합의', detail: '4일간 출발 / 2인 총 약 320~420만원 합의', defaultAssignee: 'sawi', priority: 'high' },
   { id: 't1-2', phase: 'p1', title: '두 분의 건강 상태 확인', detail: '평소 복용약, 혈압·당뇨 관리 상태, 보행 가능 거리 등', defaultAssignee: 'wife', priority: 'high' },
-  { id: 't1-3', phase: 'p1', title: '두 분 여권 잔여 기간 확인', detail: '출국일(11/17) 기준 6개월 이상 남아야 함', defaultAssignee: 'wife', priority: 'high' },
+  { id: 't1-3', phase: 'p1', title: '두 분 여권 잔여 기간 확인', detail: '출국일 기준 6개월 이상 남아야 함', defaultAssignee: 'wife', priority: 'high' },
   { id: 't1-4', phase: 'p1', title: '항공권/패키지 후보 상품 공유', detail: '롯데관광 [KE/품격] D02A-0262996 상품 어르신께 미리 안내', defaultAssignee: 'sawi', priority: 'medium' },
-  { id: 't1-5', phase: 'p1', title: '두 분 출발일 일정 비우시기 부탁드리기', detail: '11/17(화)~20(금) 4일간 다른 약속 없도록', defaultAssignee: 'wife', priority: 'medium' },
+  { id: 't1-5', phase: 'p1', title: '두 분 출발일 일정 비우시기 부탁드리기', detail: '4일간 다른 약속 없도록', defaultAssignee: 'wife', priority: 'medium' },
   { id: 't2-1', phase: 'p2', title: '여권 사진 촬영 (두 분)', detail: '흰 배경, 6개월 이내 촬영, 사진관에서 여권용으로 촬영 부탁', defaultAssignee: 'wife', priority: 'high' },
   { id: 't2-2', phase: 'p2', title: '여권 발급/갱신 구청 방문 동행', detail: '김포 고촌 인근 시·구청 가능', defaultAssignee: 'wife', priority: 'high' },
   { id: 't2-3', phase: 'p2', title: '여권 수령 (발급 후 5~7 영업일)', detail: '본인 직접 수령 원칙. 어르신 동행 픽업', defaultAssignee: 'sawi', priority: 'high' },
   { id: 't2-4', phase: 'p2', title: '여권 사본 보관', detail: '여권 분실 대비 사본을 가족 카톡방에 공유', defaultAssignee: 'sawi', priority: 'medium' },
-  { id: 't3-1', phase: 'p3', title: '롯데관광 11월 상품 일정 오픈 확인', detail: 'lottetour.com 상품코드 D02A-0262996 또는 1577-3000', defaultAssignee: 'sawi', priority: 'high' },
-  { id: 't3-2', phase: 'p3', title: '출발일 후보 3개 압축', detail: '1순위 11/17(화), 2순위 11/19(목), 3순위 11/24(화)', defaultAssignee: 'sawi', priority: 'high' },
-  { id: 't3-3', phase: 'p3', title: '가족 일정 조율 — 공항 픽업/드롭', detail: '미팅 11/17 오전 9시, 귀국 11/20 오후 6:30 픽업', defaultAssignee: 'sibling', priority: 'medium' },
+  { id: 't3-1', phase: 'p3', title: '롯데관광 상품 일정 오픈 확인', detail: 'lottetour.com 상품코드 D02A-0262996 또는 1577-3000', defaultAssignee: 'sawi', priority: 'high' },
+  { id: 't3-2', phase: 'p3', title: '출발일 후보 3개 압축', detail: '여러 출발일 후보 비교', defaultAssignee: 'sawi', priority: 'high' },
+  { id: 't3-3', phase: 'p3', title: '가족 일정 조율 — 공항 픽업/드롭', detail: '미팅 오전 9시, 귀국 오후 6:30 픽업', defaultAssignee: 'sibling', priority: 'medium' },
   { id: 't3-4', phase: 'p3', title: '예약 전 최종 가족 회의', detail: '출발일·룸 옵션·항공 옵션 최종 합의', defaultAssignee: 'sawi', priority: 'medium' },
-  { id: 't4-1', phase: 'p4', title: '★ 롯데관광 예약 — 1577-3000', detail: '상품코드 D02A-0262996, 26년 11월 17일 출발, 어르신 두 분 2인 1실', defaultAssignee: 'sawi', priority: 'critical' },
-  { id: 't4-2', phase: 'p4', title: '얼리버드 할인 적용 (60일 전 결제)', detail: '8월 중순 결제 시 1인당 약 10만원 할인 가능', defaultAssignee: 'sawi', priority: 'high' },
+  { id: 't4-1', phase: 'p4', title: '★ 롯데관광 예약 — 1577-3000', detail: '상품코드 D02A-0262996, 어르신 두 분 2인 1실', defaultAssignee: 'sawi', priority: 'critical' },
+  { id: 't4-2', phase: 'p4', title: '얼리버드 할인 적용 (60일 전 결제)', detail: '1인당 약 10만원 할인 가능', defaultAssignee: 'sawi', priority: 'high' },
   { id: 't4-3', phase: 'p4', title: '카드 무이자 할부 신청 (6~12개월)', detail: 'KB·삼성·신한·현대·롯데카드 모두 가능', defaultAssignee: 'sawi', priority: 'high' },
   { id: 't4-4', phase: 'p4', title: '룸 옵션 선택 (트윈 vs 더블)', detail: '두 분 침대 따로 쓰시려면 트윈 지정 (+3만원/인)', defaultAssignee: 'wife', priority: 'medium' },
   { id: 't4-5', phase: 'p4', title: '항공권 좌석 사전 지정', detail: '복도쪽 좌석 두 자리 나란히 지정', defaultAssignee: 'sawi', priority: 'medium' },
@@ -155,14 +133,93 @@ const DEFAULT_TASKS = [
   { id: 't9-3', phase: 'p9', title: '두 분 컨디션 점검', detail: '출발 2~3일 전부터 푹 쉬시도록', defaultAssignee: 'wife', priority: 'medium' },
   { id: 't9-4', phase: 'p9', title: '호텔 정보·가이드 연락처 두 분 지갑에', detail: '한글로 인쇄한 일정표 지갑에', defaultAssignee: 'sawi', priority: 'high' },
   { id: 't9-5', phase: 'p9', title: '공항 가는 차량 최종 확인', detail: '리무진/가족 차량/콜택시 최종 확정', defaultAssignee: 'sibling', priority: 'high' },
-  { id: 't9-6', phase: 'p9', title: '날씨 확인 — 큐슈 11월 일기예보', detail: '옷차림 조정 알려드리기', defaultAssignee: 'sawi', priority: 'low' },
+  { id: 't9-6', phase: 'p9', title: '날씨 확인 — 출발지 일기예보', detail: '옷차림 조정 알려드리기', defaultAssignee: 'sawi', priority: 'low' },
   { id: 't10-1', phase: 'p10', title: '인천공항 도착 (오전 9시 미팅)', detail: '롯데관광 인솔자 미팅 — 제2여객터미널 3층', defaultAssignee: 'sibling', priority: 'critical' },
   { id: 't10-2', phase: 'p10', title: '두 분 환송 + 출발 인증샷', detail: '칠순 여행 첫날 가족 사진', defaultAssignee: 'sibling', priority: 'medium' },
-  { id: 't10-3', phase: 'p10', title: '두 분 안전 도착 확인', detail: '후쿠오카 도착 후 카톡으로 안부 확인', defaultAssignee: 'sawi', priority: 'high' },
+  { id: 't10-3', phase: 'p10', title: '두 분 안전 도착 확인', detail: '도착 후 카톡으로 안부 확인', defaultAssignee: 'sawi', priority: 'high' },
 ];
 
 // ═══════════════════════════════════════════════════════════════════
-// 아이콘 (Lucide 스타일 인라인 SVG)
+// 유틸리티 함수
+// ═══════════════════════════════════════════════════════════════════
+function parseDate(str) {
+  if (!str) return null;
+  const [y, m, d] = str.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+function formatDateKey(date) {
+  if (!date) return '';
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+function dayOfWeekKor(date) {
+  return ['일','월','화','수','목','금','토'][date.getDay()];
+}
+function calcDday(targetDate, today = new Date()) {
+  const t = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const d = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate());
+  return Math.ceil((d - t) / 86400000);
+}
+
+// 페이즈 기반으로 dueDate 자동 분배
+function autoAssignDueDates(tasks, departureDate) {
+  const depDate = parseDate(departureDate);
+  if (!depDate) return tasks;
+
+  // 페이즈별 태스크 그룹화
+  const byPhase = {};
+  tasks.forEach((t, idx) => {
+    if (!byPhase[t.phase]) byPhase[t.phase] = [];
+    byPhase[t.phase].push({ task: t, originalIdx: idx });
+  });
+
+  const result = [...tasks];
+  Object.entries(byPhase).forEach(([phaseId, group]) => {
+    const phaseInfo = PHASES.find(p => p.id === phaseId);
+    if (!phaseInfo) return;
+    const count = group.length;
+    const dRange = phaseInfo.dMax - phaseInfo.dMin;
+    group.forEach((item, i) => {
+      if (item.task.dueDate) return; // 이미 있으면 유지
+      // 페이즈 시작(D-max)부터 끝(D-min)까지 균등 분배
+      let dOffset;
+      if (count === 1) {
+        dOffset = (phaseInfo.dMin + phaseInfo.dMax) / 2;
+      } else {
+        dOffset = phaseInfo.dMax - (i / (count - 1)) * dRange;
+      }
+      dOffset = Math.round(dOffset);
+      const taskDate = new Date(depDate.getTime() - dOffset * 86400000);
+      result[item.originalIdx] = { ...item.task, dueDate: formatDateKey(taskDate) };
+    });
+  });
+  return result;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Firebase 초기화
+// ═══════════════════════════════════════════════════════════════════
+let firebaseApp = null;
+let dbRef = null;
+let firebaseInitialized = false;
+let firebaseError = null;
+
+try {
+  if (FIREBASE_CONFIG.apiKey && !FIREBASE_CONFIG.apiKey.includes('REPLACE_ME')) {
+    firebaseApp = firebase.initializeApp(FIREBASE_CONFIG);
+    dbRef = firebase.database().ref(TRIP_KEY);
+    firebaseInitialized = true;
+  } else {
+    firebaseError = '⚙️ Firebase 설정이 필요합니다.';
+  }
+} catch (e) {
+  firebaseError = 'Firebase 초기화 실패: ' + e.message;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// 아이콘
 // ═══════════════════════════════════════════════════════════════════
 const Icon = ({ d, size = 16, fill = 'none', stroke = 'currentColor', strokeWidth = 2, style = {} }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill={fill} stroke={stroke}
@@ -182,11 +239,12 @@ const I = {
   X: (p) => <Icon {...p} d={<><path d="M18 6 6 18M6 6l12 12" /></>} />,
   ChevronDown: (p) => <Icon {...p} d={<polyline points="6 9 12 15 18 9" />} />,
   ChevronUp: (p) => <Icon {...p} d={<polyline points="18 15 12 9 6 15" />} />,
+  ChevronLeft: (p) => <Icon {...p} d={<polyline points="15 18 9 12 15 6" />} />,
+  ChevronRight: (p) => <Icon {...p} d={<polyline points="9 18 15 12 9 6" />} />,
   Save: (p) => <Icon {...p} d={<><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" /><polyline points="17 21 17 13 7 13 7 21" /><polyline points="7 3 7 8 15 8" /></>} />,
   Reset: (p) => <Icon {...p} d={<><polyline points="1 4 1 10 7 10" /><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" /></>} />,
   Printer: (p) => <Icon {...p} d={<><polyline points="6 9 6 2 18 2 18 9" /><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" /><rect width="12" height="8" x="6" y="14" /></>} />,
   Share: (p) => <Icon {...p} d={<><circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><line x1="8.59" y1="13.51" x2="15.42" y2="17.49" /><line x1="15.41" y1="6.51" x2="8.59" y2="10.49" /></>} />,
-  Book: (p) => <Icon {...p} d={<><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" /></>} />,
   Sparkles: (p) => <Icon {...p} d={<><path d="m12 3-1.9 5.8a2 2 0 0 1-1.3 1.3L3 12l5.8 1.9a2 2 0 0 1 1.3 1.3L12 21l1.9-5.8a2 2 0 0 1 1.3-1.3L21 12l-5.8-1.9a2 2 0 0 1-1.3-1.3Z" /></>} />,
   MapPin: (p) => <Icon {...p} d={<><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z" /><circle cx="12" cy="10" r="3" /></>} />,
   Plus: (p) => <Icon {...p} d={<><path d="M12 5v14M5 12h14" /></>} />,
@@ -197,45 +255,23 @@ const I = {
   Wifi: (p) => <Icon {...p} d={<><path d="M5 13a10 10 0 0 1 14 0M8.5 16.5a5 5 0 0 1 7 0M2 8.82a15 15 0 0 1 20 0" /><line x1="12" y1="20" x2="12" y2="20" /></>} />,
   WifiOff: (p) => <Icon {...p} d={<><line x1="1" y1="1" x2="23" y2="23" /><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55M5 12.55a10.94 10.94 0 0 1 5.17-2.39M10.71 5.05A16 16 0 0 1 22.58 9M1.42 9a15.91 15.91 0 0 1 4.7-2.88M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01" /></>} />,
   Copy: (p) => <Icon {...p} d={<><rect width="14" height="14" x="8" y="8" rx="2" ry="2" /><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" /></>} />,
+  List: (p) => <Icon {...p} d={<><line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" /><line x1="3" y1="6" x2="3.01" y2="6" /><line x1="3" y1="12" x2="3.01" y2="12" /><line x1="3" y1="18" x2="3.01" y2="18" /></>} />,
 };
 
 // ═══════════════════════════════════════════════════════════════════
 // 공용 스타일
 // ═══════════════════════════════════════════════════════════════════
-const inputStyle = {
-  width: '100%', padding: '10px 14px', fontSize: '14px',
-  border: '1.5px solid #E7E2D6', borderRadius: '10px',
-  fontFamily: 'inherit', color: '#1F2937', background: 'white', boxSizing: 'border-box',
-};
+const inputStyle = { width: '100%', padding: '10px 14px', fontSize: '14px', border: '1.5px solid #E7E2D6', borderRadius: '10px', fontFamily: 'inherit', color: '#1F2937', background: 'white', boxSizing: 'border-box' };
 const labelStyle = { display: 'block', fontSize: '12px', fontWeight: 700, color: '#7C2D12', marginBottom: '6px' };
 const primaryBtnStyle = { padding: '10px 20px', fontSize: '14px', background: '#7C2D12', color: 'white', border: 'none', borderRadius: '14px', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' };
 const secondaryBtnStyle = { padding: '10px 20px', fontSize: '14px', background: 'white', color: '#6B7280', border: '1px solid #E7E2D6', borderRadius: '14px', cursor: 'pointer', fontFamily: 'inherit', fontWeight: 600 };
 const iconBtnStyle = (color) => ({ width: '28px', height: '28px', background: `${color}10`, color, border: `1px solid ${color}33`, borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'inherit' });
 
 // ═══════════════════════════════════════════════════════════════════
-// Firebase 초기화 & 데이터 훅
-// ═══════════════════════════════════════════════════════════════════
-let firebaseApp = null;
-let dbRef = null;
-let firebaseInitialized = false;
-let firebaseError = null;
-
-try {
-  if (FIREBASE_CONFIG.apiKey && !FIREBASE_CONFIG.apiKey.includes('REPLACE_ME')) {
-    firebaseApp = firebase.initializeApp(FIREBASE_CONFIG);
-    dbRef = firebase.database().ref(TRIP_KEY);
-    firebaseInitialized = true;
-  } else {
-    firebaseError = '⚙️ Firebase 설정이 필요합니다. index.html 상단의 FIREBASE_CONFIG를 수정하세요.';
-  }
-} catch (e) {
-  firebaseError = 'Firebase 초기화 실패: ' + e.message;
-}
-
-// ═══════════════════════════════════════════════════════════════════
 // 메인 앱
 // ═══════════════════════════════════════════════════════════════════
 function App() {
+  const [tripInfo, setTripInfo] = useState(DEFAULT_TRIP_INFO);
   const [tasks, setTasks] = useState(DEFAULT_TASKS);
   const [taskStatus, setTaskStatus] = useState({});
   const [members, setMembers] = useState(DEFAULT_MEMBERS);
@@ -251,34 +287,37 @@ function App() {
   const [taskModalState, setTaskModalState] = useState(null);
   const [editMode, setEditMode] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
-  const isRemoteUpdate = useRef(false);
+  const [showTripInfoModal, setShowTripInfoModal] = useState(false);
+  const [viewMode, setViewMode] = useState('list'); // 'list' | 'calendar'
 
-  // Firebase 실시간 리스너
   useEffect(() => {
     if (!firebaseInitialized) {
       setLoading(false);
       setConnectionStatus('error');
       return;
     }
-
-    // 연결 상태 모니터링
     const connectedRef = firebase.database().ref('.info/connected');
-    const onConnect = connectedRef.on('value', (snap) => {
-      setConnectionStatus(snap.val() ? 'connected' : 'disconnected');
-    });
-
-    // 데이터 리스너
+    const onConnect = connectedRef.on('value', (snap) => setConnectionStatus(snap.val() ? 'connected' : 'disconnected'));
     const onData = dbRef.on('value', (snapshot) => {
       const data = snapshot.val();
-      isRemoteUpdate.current = true;
       if (data) {
-        setTasks(data.tasks || DEFAULT_TASKS);
+        const loadedTripInfo = data.tripInfo || DEFAULT_TRIP_INFO;
+        let loadedTasks = data.tasks || DEFAULT_TASKS;
+        // 마이그레이션: dueDate 없는 태스크에 자동 분배
+        const needsMigration = loadedTasks.some(t => !t.dueDate);
+        if (needsMigration) {
+          loadedTasks = autoAssignDueDates(loadedTasks, loadedTripInfo.departureDate);
+          dbRef.update({ tasks: loadedTasks });
+        }
+        setTripInfo(loadedTripInfo);
+        setTasks(loadedTasks);
         setTaskStatus(data.taskStatus || {});
         setMembers(data.members || DEFAULT_MEMBERS);
       } else {
-        // 최초 접속: 기본값 업로드
+        const initialTasks = autoAssignDueDates(DEFAULT_TASKS, DEFAULT_TRIP_INFO.departureDate);
         dbRef.set({
-          tasks: DEFAULT_TASKS,
+          tripInfo: DEFAULT_TRIP_INFO,
+          tasks: initialTasks,
           taskStatus: {},
           members: DEFAULT_MEMBERS,
           lastUpdated: new Date().toISOString(),
@@ -286,25 +325,20 @@ function App() {
         });
       }
       setLoading(false);
-      setTimeout(() => { isRemoteUpdate.current = false; }, 100);
     }, (err) => {
       console.error('Firebase read error', err);
       setConnectionStatus('error');
       setLoading(false);
     });
-
-    return () => {
-      dbRef.off('value', onData);
-      connectedRef.off('value', onConnect);
-    };
+    return () => { dbRef.off('value', onData); connectedRef.off('value', onConnect); };
   }, []);
 
-  // 저장
   const saveData = async (override = {}) => {
     if (!firebaseInitialized) return;
     setSaveStatus('saving');
     try {
       await dbRef.update({
+        tripInfo: override.tripInfo !== undefined ? override.tripInfo : tripInfo,
         tasks: override.tasks !== undefined ? override.tasks : tasks,
         taskStatus: override.taskStatus !== undefined ? override.taskStatus : taskStatus,
         members: override.members !== undefined ? override.members : members,
@@ -341,11 +375,16 @@ function App() {
   };
 
   const addTask = (phase, data) => {
+    const depDate = parseDate(tripInfo.departureDate);
+    const phaseInfo = PHASES.find(p => p.id === phase);
+    const dOffset = phaseInfo ? Math.round((phaseInfo.dMin + phaseInfo.dMax) / 2) : 90;
+    const taskDate = new Date(depDate.getTime() - dOffset * 86400000);
     const newTask = {
       id: `t-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
       phase, title: data.title, detail: data.detail || '',
       defaultAssignee: data.defaultAssignee || 'unassigned',
       priority: data.priority || 'medium',
+      dueDate: data.dueDate || formatDateKey(taskDate),
     };
     const updated = [...tasks, newTask];
     setTasks(updated);
@@ -398,24 +437,50 @@ function App() {
     saveData({ members: updatedMembers, taskStatus: updatedStatus, tasks: updatedTasks });
   };
 
+  // 여행 정보 저장 + 출발일 변경 시 dueDate 자동 재계산 옵션
+  const saveTripInfo = (newInfo, recalcDueDates) => {
+    let updatedTasks = tasks;
+    if (recalcDueDates && newInfo.departureDate !== tripInfo.departureDate) {
+      const oldDep = parseDate(tripInfo.departureDate);
+      const newDep = parseDate(newInfo.departureDate);
+      const diffDays = Math.round((newDep - oldDep) / 86400000);
+      updatedTasks = tasks.map(t => {
+        if (!t.dueDate) return t;
+        const oldDate = parseDate(t.dueDate);
+        const newDate = new Date(oldDate.getTime() + diffDays * 86400000);
+        return { ...t, dueDate: formatDateKey(newDate) };
+      });
+      setTasks(updatedTasks);
+    }
+    setTripInfo(newInfo);
+    saveData({ tripInfo: newInfo, tasks: updatedTasks });
+    setShowTripInfoModal(false);
+  };
+
   const togglePhase = (phaseId) => setCollapsedPhases({ ...collapsedPhases, [phaseId]: !collapsedPhases[phaseId] });
 
   const resetCheckmarks = () => {
-    if (window.confirm('체크 상태와 메모를 초기화하시겠습니까? (태스크/담당자는 유지됩니다)')) {
+    if (window.confirm('체크 상태와 메모를 초기화하시겠습니까?')) {
       setTaskStatus({});
       saveData({ taskStatus: {} });
     }
   };
 
   const restoreDefaults = () => {
-    if (!window.confirm('모든 태스크와 담당자를 기본값으로 복원하시겠습니까?\n(체크 상태, 메모, 직접 추가한 모든 항목이 사라집니다)')) return;
-    setTasks(DEFAULT_TASKS);
+    if (!window.confirm('모든 태스크와 담당자를 기본값으로 복원하시겠습니까?')) return;
+    const freshTasks = autoAssignDueDates(DEFAULT_TASKS, tripInfo.departureDate);
+    setTasks(freshTasks);
     setMembers(DEFAULT_MEMBERS);
     setTaskStatus({});
-    saveData({ tasks: DEFAULT_TASKS, members: DEFAULT_MEMBERS, taskStatus: {} });
+    saveData({ tasks: freshTasks, members: DEFAULT_MEMBERS, taskStatus: {} });
   };
 
-  const dDay = useMemo(() => Math.ceil((DEPARTURE_DATE - today) / (1000 * 60 * 60 * 24)), [today]);
+  const departureDate = useMemo(() => parseDate(tripInfo.departureDate), [tripInfo.departureDate]);
+  const dDay = useMemo(() => departureDate ? calcDday(departureDate, today) : 0, [departureDate, today]);
+  const departureLabel = useMemo(() => {
+    if (!departureDate) return '';
+    return `${departureDate.getFullYear()}.${String(departureDate.getMonth()+1).padStart(2,'0')}.${String(departureDate.getDate()).padStart(2,'0')}(${dayOfWeekKor(departureDate)})`;
+  }, [departureDate]);
 
   const stats = useMemo(() => {
     const total = tasks.length;
@@ -424,10 +489,7 @@ function App() {
     const criticalDone = critical.filter(t => taskStatus[t.id]?.done).length;
     const byMember = {};
     members.forEach(m => {
-      const assigned = tasks.filter(t => {
-        const a = taskStatus[t.id]?.assignee || t.defaultAssignee;
-        return a === m.id;
-      });
+      const assigned = tasks.filter(t => (taskStatus[t.id]?.assignee || t.defaultAssignee) === m.id);
       const completed = assigned.filter(t => taskStatus[t.id]?.done).length;
       byMember[m.id] = { total: assigned.length, done: completed };
     });
@@ -462,7 +524,6 @@ function App() {
     low: { label: '여유', color: '#6B7280', bg: '#F3F4F6' },
   };
 
-  // Firebase 미설정 안내
   if (firebaseError) {
     return (
       <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#FEF6E4', padding: '20px' }}>
@@ -470,8 +531,7 @@ function App() {
           <div style={{ fontSize: '48px', marginBottom: '16px', textAlign: 'center' }}>⚙️</div>
           <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#7C2D12', margin: '0 0 12px 0', textAlign: 'center' }}>Firebase 설정 필요</h2>
           <p style={{ fontSize: '14px', color: '#6B7280', lineHeight: 1.7, margin: '0 0 16px 0' }}>
-            가족 공유 기능을 사용하려면 Firebase Realtime Database 설정이 필요합니다.
-            <strong style={{ color: '#7C2D12' }}> index.html 상단의 FIREBASE_CONFIG 객체</strong>를 본인의 Firebase 프로젝트 정보로 교체하세요.
+            <strong style={{ color: '#7C2D12' }}>index.html 상단의 FIREBASE_CONFIG</strong>를 본인의 Firebase 프로젝트 정보로 교체하세요.
           </p>
           <div style={{ background: '#FEF3C7', padding: '14px', borderRadius: '12px', fontSize: '12px', color: '#7C2D12', lineHeight: 1.8 }}>
             <strong>셋업 가이드:</strong><br/>
@@ -479,12 +539,8 @@ function App() {
             2. Realtime Database 활성화 (asia-southeast1 권장)<br/>
             3. 보안 규칙: <code>".read": true, ".write": true</code><br/>
             4. 웹 앱 등록 후 설정 정보를 복사<br/>
-            5. 이 파일 상단의 FIREBASE_CONFIG 객체에 붙여넣기<br/>
-            6. GitHub Pages에 푸시 → 가족 공유 끝!
+            5. 이 파일 상단의 FIREBASE_CONFIG 객체에 붙여넣기
           </div>
-          <p style={{ fontSize: '12px', color: '#9CA3AF', marginTop: '14px', textAlign: 'center' }}>
-            자세한 가이드는 README.md를 참고하세요.
-          </p>
         </div>
       </div>
     );
@@ -496,93 +552,58 @@ function App() {
         <div style={{ textAlign: 'center', color: '#8B2C20' }}>
           <I.Plane size={48} style={{ animation: 'fly 2s ease-in-out infinite' }} />
           <div style={{ fontSize: '18px', marginTop: '16px' }}>가족 데이터를 불러오는 중...</div>
-          <div style={{ fontSize: '12px', marginTop: '8px', opacity: 0.6 }}>Firebase 동기화 중</div>
         </div>
       </div>
     );
   }
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'linear-gradient(180deg, #FEF6E4 0%, #FFF8E7 100%)',
-      paddingBottom: '60px',
-    }}>
-      <header style={{
-        background: 'linear-gradient(135deg, #7C2D12 0%, #B45309 50%, #C2410C 100%)',
-        color: 'white', padding: '32px 16px 56px', position: 'relative', overflow: 'hidden',
-      }}>
+    <div style={{ minHeight: '100vh', background: 'linear-gradient(180deg, #FEF6E4 0%, #FFF8E7 100%)', paddingBottom: '60px' }}>
+      <header style={{ background: 'linear-gradient(135deg, #7C2D12 0%, #B45309 50%, #C2410C 100%)', color: 'white', padding: '32px 16px 56px', position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', top: 30, right: 40, opacity: 0.15, fontSize: '120px', transform: 'rotate(-15deg)' }}>🍁</div>
         <div style={{ position: 'absolute', bottom: 20, left: 40, opacity: 0.1, fontSize: '100px', transform: 'rotate(20deg)' }}>🍂</div>
 
         <div style={{ maxWidth: '1200px', margin: '0 auto', position: 'relative' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', opacity: 0.9, letterSpacing: '0.1em' }}>
-              <I.Sparkles size={13} /> JAPAN AUTUMN 2026 · KYUSHU
+              <I.Sparkles size={13} /> {tripInfo.regionLabel}
               <ConnectionPill status={connectionStatus} />
             </div>
             <div style={{ display: 'flex', gap: '6px' }}>
-              <button onClick={() => setShowShareModal(true)}
-                style={{
-                  padding: '6px 12px', fontSize: '12px',
-                  background: 'rgba(255,255,255,0.15)', color: 'white',
-                  border: '1px solid rgba(255,255,255,0.3)', borderRadius: '20px',
-                  cursor: 'pointer', fontWeight: 700,
-                  display: 'flex', alignItems: 'center', gap: '5px',
-                  backdropFilter: 'blur(10px)',
-                }}>
+              <button onClick={() => setShowShareModal(true)} style={{ padding: '6px 12px', fontSize: '12px', background: 'rgba(255,255,255,0.15)', color: 'white', border: '1px solid rgba(255,255,255,0.3)', borderRadius: '20px', cursor: 'pointer', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '5px', backdropFilter: 'blur(10px)' }}>
                 <I.Share size={12} /> 공유
               </button>
-              <button onClick={() => setEditMode(!editMode)}
-                style={{
-                  padding: '6px 12px', fontSize: '12px',
-                  background: editMode ? 'white' : 'rgba(255,255,255,0.15)',
-                  color: editMode ? '#7C2D12' : 'white',
-                  border: '1px solid rgba(255,255,255,0.3)', borderRadius: '20px',
-                  cursor: 'pointer', fontWeight: 700,
-                  display: 'flex', alignItems: 'center', gap: '5px',
-                  backdropFilter: 'blur(10px)',
-                }}>
-                <I.Settings size={12} />
-                {editMode ? '편집 끄기' : '편집'}
+              <button onClick={() => setEditMode(!editMode)} style={{ padding: '6px 12px', fontSize: '12px', background: editMode ? 'white' : 'rgba(255,255,255,0.15)', color: editMode ? '#7C2D12' : 'white', border: '1px solid rgba(255,255,255,0.3)', borderRadius: '20px', cursor: 'pointer', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '5px', backdropFilter: 'blur(10px)' }}>
+                <I.Settings size={12} />{editMode ? '편집 끄기' : '편집'}
               </button>
             </div>
           </div>
 
-          <h1 style={{ fontSize: 'clamp(24px, 5vw, 40px)', fontWeight: 800, margin: '0 0 6px 0', lineHeight: 1.2, letterSpacing: '-0.02em' }}>
-            장인어른 · 장모님 칠순여행
-          </h1>
-          <p style={{ fontSize: '15px', opacity: 0.9, margin: '0 0 28px 0', fontWeight: 300 }}>
-            준비 타임라인 · 가족 공유 보드
-          </p>
+          <h1 style={{ fontSize: 'clamp(24px, 5vw, 40px)', fontWeight: 800, margin: '0 0 6px 0', lineHeight: 1.2, letterSpacing: '-0.02em' }}>장인어른 · 장모님 칠순여행</h1>
+          <p style={{ fontSize: '15px', opacity: 0.9, margin: '0 0 28px 0', fontWeight: 300 }}>준비 타임라인 · 가족 공유 보드</p>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '10px' }}>
             <StatCard label="OUTBOUND" value={`D-${dDay > 0 ? dDay : Math.abs(dDay) === 0 ? 'DAY' : `+${Math.abs(dDay)}`}`}
-              sub={<><I.Calendar size={11} /> 2026.11.17(화)</>} />
+              sub={<><I.Calendar size={11} /> {departureLabel}</>}
+              editable={editMode} onEdit={() => setShowTripInfoModal(true)} />
             <StatCard label="PROGRESS" value={`${stats.percent}%`} sub={`${stats.done} / ${stats.total} 완료`} progress={stats.percent} />
             <StatCard label="🚨 CRITICAL" value={<>{stats.criticalDone}<span style={{ opacity: 0.5, fontSize: '22px' }}>/{stats.critical}</span></>} sub="핵심 작업 완료" />
-            <StatCard label={<><I.MapPin size={10} /> DESTINATION</>} value={<span style={{ fontSize: '20px' }}>큐슈 3박 4일</span>} sub="벳부·유후인·후쿠오카" />
+            <StatCard label={<><I.MapPin size={10} /> DESTINATION</>}
+              value={<span style={{ fontSize: '20px' }}>{tripInfo.destinationName}</span>}
+              sub={tripInfo.destinationSub}
+              editable={editMode} onEdit={() => setShowTripInfoModal(true)} />
           </div>
         </div>
       </header>
 
       <section style={{ maxWidth: '1200px', margin: '-26px auto 0', padding: '0 16px', position: 'relative' }}>
-        <div style={{
-          background: 'white', borderRadius: '18px', padding: '20px',
-          boxShadow: '0 10px 40px rgba(124, 45, 18, 0.12)',
-          border: '1px solid rgba(124, 45, 18, 0.08)',
-        }}>
+        <div style={{ background: 'white', borderRadius: '18px', padding: '20px', boxShadow: '0 10px 40px rgba(124, 45, 18, 0.12)', border: '1px solid rgba(124, 45, 18, 0.08)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '8px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               <I.Users size={16} stroke="#7C2D12" />
               <h2 style={{ fontSize: '14px', fontWeight: 700, margin: 0, color: '#7C2D12' }}>담당자별 진행</h2>
             </div>
-            <button onClick={() => setShowMemberManager(true)}
-              style={{
-                padding: '5px 12px', fontSize: '12px', background: '#FEF3C7', color: '#7C2D12',
-                border: '1px solid #FDE68A', borderRadius: '14px', cursor: 'pointer', fontWeight: 700,
-                display: 'flex', alignItems: 'center', gap: '5px',
-              }}>
+            <button onClick={() => setShowMemberManager(true)} style={{ padding: '5px 12px', fontSize: '12px', background: '#FEF3C7', color: '#7C2D12', border: '1px solid #FDE68A', borderRadius: '14px', cursor: 'pointer', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '5px' }}>
               <I.UserPlus size={12} /> 담당자 관리
             </button>
           </div>
@@ -596,9 +617,7 @@ function App() {
                     <span style={{ fontSize: '17px' }}>{m.icon}</span>
                     <span style={{ fontSize: '12px', fontWeight: 600, color: m.color, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.name}</span>
                   </div>
-                  <div style={{ fontSize: '18px', fontWeight: 800, color: '#1F2937' }}>
-                    {s.done}<span style={{ opacity: 0.4, fontSize: '13px', fontWeight: 600 }}>/{s.total}</span>
-                  </div>
+                  <div style={{ fontSize: '18px', fontWeight: 800, color: '#1F2937' }}>{s.done}<span style={{ opacity: 0.4, fontSize: '13px', fontWeight: 600 }}>/{s.total}</span></div>
                   <div style={{ height: '4px', background: '#EDE9E3', borderRadius: '2px', marginTop: '6px', overflow: 'hidden' }}>
                     <div style={{ height: '100%', width: `${pct}%`, background: m.color, transition: 'width 0.5s' }} />
                   </div>
@@ -611,289 +630,442 @@ function App() {
 
       <section style={{ maxWidth: '1200px', margin: '20px auto', padding: '0 16px' }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center' }}>
-          <I.Filter size={14} stroke="#7C2D12" />
-          <span style={{ fontSize: '12px', color: '#7C2D12', fontWeight: 600 }}>필터:</span>
+          {/* 뷰 토글 */}
+          <div style={{ display: 'flex', gap: '3px', background: 'white', padding: '3px', borderRadius: '18px', border: '1px solid #E7E2D6' }}>
+            <button onClick={() => setViewMode('list')} style={{ padding: '4px 12px', fontSize: '12px', border: 'none', borderRadius: '15px', cursor: 'pointer', fontWeight: 600, background: viewMode === 'list' ? '#7C2D12' : 'transparent', color: viewMode === 'list' ? 'white' : '#7C2D12', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <I.List size={12} /> 리스트
+            </button>
+            <button onClick={() => setViewMode('calendar')} style={{ padding: '4px 12px', fontSize: '12px', border: 'none', borderRadius: '15px', cursor: 'pointer', fontWeight: 600, background: viewMode === 'calendar' ? '#7C2D12' : 'transparent', color: viewMode === 'calendar' ? 'white' : '#7C2D12', display: 'flex', alignItems: 'center', gap: '4px' }}>
+              <I.Calendar size={12} /> 캘린더
+            </button>
+          </div>
 
-          <select value={filterAssignee} onChange={e => setFilterAssignee(e.target.value)}
-            style={{
-              padding: '5px 24px 5px 12px', borderRadius: '18px', border: '1px solid #E7E2D6',
-              fontSize: '12px', background: 'white', cursor: 'pointer', color: '#1F2937', appearance: 'none',
-              backgroundImage: 'url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'10\' height=\'10\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%237C2D12\' stroke-width=\'2\'%3e%3cpolyline points=\'6 9 12 15 18 9\'/%3e%3c/svg%3e")',
-              backgroundRepeat: 'no-repeat', backgroundPosition: 'right 8px center',
-            }}>
+          <I.Filter size={14} stroke="#7C2D12" style={{ marginLeft: '4px' }} />
+          <select value={filterAssignee} onChange={e => setFilterAssignee(e.target.value)} style={{ padding: '5px 24px 5px 12px', borderRadius: '18px', border: '1px solid #E7E2D6', fontSize: '12px', background: 'white', cursor: 'pointer', color: '#1F2937', appearance: 'none', backgroundImage: 'url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'10\' height=\'10\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'%237C2D12\' stroke-width=\'2\'%3e%3cpolyline points=\'6 9 12 15 18 9\'/%3e%3c/svg%3e")', backgroundRepeat: 'no-repeat', backgroundPosition: 'right 8px center' }}>
             <option value="all">전체 담당자</option>
             {members.map(m => <option key={m.id} value={m.id}>{m.icon} {m.name}</option>)}
           </select>
 
           <div style={{ display: 'flex', gap: '3px', background: 'white', padding: '3px', borderRadius: '18px', border: '1px solid #E7E2D6' }}>
             {[{ value: 'all', label: '전체' }, { value: 'todo', label: '미완료' }, { value: 'done', label: '완료' }].map(opt => (
-              <button key={opt.value} onClick={() => setFilterStatus(opt.value)}
-                style={{
-                  padding: '3px 10px', fontSize: '11px', border: 'none', borderRadius: '14px',
-                  cursor: 'pointer', fontWeight: 600,
-                  background: filterStatus === opt.value ? '#7C2D12' : 'transparent',
-                  color: filterStatus === opt.value ? 'white' : '#7C2D12',
-                }}>
-                {opt.label}
-              </button>
+              <button key={opt.value} onClick={() => setFilterStatus(opt.value)} style={{ padding: '3px 10px', fontSize: '11px', border: 'none', borderRadius: '14px', cursor: 'pointer', fontWeight: 600, background: filterStatus === opt.value ? '#7C2D12' : 'transparent', color: filterStatus === opt.value ? 'white' : '#7C2D12' }}>{opt.label}</button>
             ))}
           </div>
 
           <div style={{ marginLeft: 'auto', display: 'flex', gap: '5px', alignItems: 'center' }}>
             {saveStatus === 'saving' && <span style={{ fontSize: '11px', color: '#6B7280', animation: 'pulse 1s infinite' }}>↑ 동기화</span>}
             {saveStatus === 'saved' && <span style={{ fontSize: '11px', color: '#15803D' }}>✓ 저장됨</span>}
-            {saveStatus === 'error' && <span style={{ fontSize: '11px', color: '#DC2626' }}>저장 실패</span>}
-
-            <button onClick={() => window.print()} className="desktop-only"
-              style={{ padding: '5px 10px', fontSize: '11px', background: 'white', border: '1px solid #E7E2D6', borderRadius: '14px', cursor: 'pointer', color: '#7C2D12', display: 'flex', alignItems: 'center', gap: '3px' }}>
+            <button onClick={() => window.print()} className="desktop-only" style={{ padding: '5px 10px', fontSize: '11px', background: 'white', border: '1px solid #E7E2D6', borderRadius: '14px', cursor: 'pointer', color: '#7C2D12', display: 'flex', alignItems: 'center', gap: '3px' }}>
               <I.Printer size={11} /> 인쇄
             </button>
-            <button onClick={resetCheckmarks}
-              style={{ padding: '5px 10px', fontSize: '11px', background: 'white', border: '1px solid #FFEDD5', borderRadius: '14px', cursor: 'pointer', color: '#C2410C', display: 'flex', alignItems: 'center', gap: '3px' }}>
+            <button onClick={resetCheckmarks} style={{ padding: '5px 10px', fontSize: '11px', background: 'white', border: '1px solid #FFEDD5', borderRadius: '14px', cursor: 'pointer', color: '#C2410C', display: 'flex', alignItems: 'center', gap: '3px' }}>
               <I.Reset size={11} /> 체크 초기화
             </button>
             {editMode && (
-              <button onClick={restoreDefaults}
-                style={{ padding: '5px 10px', fontSize: '11px', background: '#FEE2E2', border: '1px solid #FECACA', borderRadius: '14px', cursor: 'pointer', color: '#DC2626', fontWeight: 600 }}>
-                기본값 복원
-              </button>
+              <button onClick={restoreDefaults} style={{ padding: '5px 10px', fontSize: '11px', background: '#FEE2E2', border: '1px solid #FECACA', borderRadius: '14px', cursor: 'pointer', color: '#DC2626', fontWeight: 600 }}>기본값 복원</button>
             )}
           </div>
         </div>
 
         {editMode && (
-          <div style={{
-            marginTop: '10px', padding: '10px 14px',
-            background: 'linear-gradient(90deg, #FEF3C7 0%, #FED7AA 100%)',
-            borderRadius: '12px', border: '1px solid #FBBF24',
-            fontSize: '12px', color: '#7C2D12',
-            display: 'flex', alignItems: 'center', gap: '6px',
-          }}>
+          <div style={{ marginTop: '10px', padding: '10px 14px', background: 'linear-gradient(90deg, #FEF3C7 0%, #FED7AA 100%)', borderRadius: '12px', border: '1px solid #FBBF24', fontSize: '12px', color: '#7C2D12', display: 'flex', alignItems: 'center', gap: '6px' }}>
             <I.Settings size={14} />
-            <strong>편집 모드 ON</strong> — 항목 옆 연필/휴지통으로 수정·삭제, 페이즈 하단 "+" 로 새 항목 추가
+            <strong>편집 모드 ON</strong> — D-day/여행지 카드, 항목 옆 연필/휴지통 으로 수정·삭제, 페이즈 하단 "+" 로 새 항목 추가
           </div>
         )}
       </section>
 
       <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '0 16px' }}>
-        {PHASES.map((phase, phaseIdx) => {
-          const phaseTasks = tasks.filter(t => t.phase === phase.id);
-          const filteredTasks = filterTasks(phaseTasks);
-          const ps = phaseStats[phase.id];
-          const isCollapsed = collapsedPhases[phase.id];
-          const allDone = ps && ps.total > 0 && ps.done === ps.total;
-
-          if (filteredTasks.length === 0 && phaseTasks.length > 0 && (filterAssignee !== 'all' || filterStatus !== 'all') && !editMode) return null;
-
-          return (
-            <div key={phase.id} style={{ marginBottom: '18px', position: 'relative' }}>
-              <div onClick={() => togglePhase(phase.id)}
-                style={{
-                  display: 'flex', alignItems: 'center', gap: '14px', padding: '14px 18px',
-                  background: allDone ? '#F0FDF4' : phase.bg, borderRadius: '14px',
-                  cursor: 'pointer', border: `2px solid ${allDone ? '#86EFAC' : phase.color}33`,
-                  marginBottom: '10px',
-                }}>
-                <div style={{
-                  minWidth: '48px', height: '48px', borderRadius: '50%',
-                  background: allDone ? '#16A34A' : phase.color, color: 'white',
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-                  fontWeight: 800, fontSize: '12px', letterSpacing: '-0.02em', lineHeight: 1,
-                  boxShadow: `0 5px 14px ${phase.color}40`,
-                }}>
-                  {allDone ? <I.CheckFill size={22} /> : <>
-                    <div style={{ fontSize: '8px', opacity: 0.8, fontWeight: 600 }}>{phase.name}</div>
-                    <div style={{ fontSize: '10px', marginTop: '2px' }}>{phaseIdx + 1}/10</div>
-                  </>}
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', flexWrap: 'wrap' }}>
-                    <h3 style={{ fontSize: '17px', fontWeight: 800, margin: 0, color: phase.color, letterSpacing: '-0.02em' }}>{phase.label}</h3>
-                    <span style={{ fontSize: '12px', color: phase.color, opacity: 0.8 }}>{phase.subtitle}</span>
-                  </div>
-                  <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '3px' }}>
-                    {phase.dMax > 0 ? `D-${phase.dMax} ~ D-${phase.dMin}` : 'D-Day'} · {ps.done}/{ps.total} 완료
-                  </div>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <div style={{ width: '60px', height: '5px', background: 'rgba(0,0,0,0.08)', borderRadius: '3px', overflow: 'hidden' }}>
-                    <div style={{ height: '100%', width: `${ps.percent}%`, background: allDone ? '#16A34A' : phase.color, transition: 'width 0.5s' }} />
-                  </div>
-                  <span style={{ fontSize: '13px', fontWeight: 700, color: phase.color, minWidth: '34px', textAlign: 'right' }}>{ps.percent}%</span>
-                  {isCollapsed ? <I.ChevronDown size={16} stroke={phase.color} /> : <I.ChevronUp size={16} stroke={phase.color} />}
-                </div>
-              </div>
-
-              {!isCollapsed && (
-                <div style={{ paddingLeft: '20px', borderLeft: `3px solid ${phase.color}`, marginLeft: '24px' }}>
-                  {filteredTasks.map((task) => {
-                    const status = taskStatus[task.id] || {};
-                    const assignee = getMember(status.assignee || task.defaultAssignee);
-                    const isDone = status.done;
-                    const memo = status.memo || '';
-                    const priority = priorityLabels[task.priority];
-
-                    return (
-                      <div key={task.id} style={{
-                        background: 'white', borderRadius: '12px', padding: '14px', marginBottom: '8px',
-                        border: `1px solid ${isDone ? '#D1FAE5' : '#F3F0EB'}`,
-                        position: 'relative', opacity: isDone ? 0.7 : 1,
-                        boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-                      }}>
-                        <div style={{
-                          position: 'absolute', left: -23, top: '18px',
-                          width: '10px', height: '10px',
-                          background: isDone ? '#16A34A' : assignee.color,
-                          borderRadius: '50%', border: '3px solid #FEF6E4',
-                          boxShadow: `0 0 0 2px ${isDone ? '#16A34A' : assignee.color}`,
-                        }} />
-
-                        <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
-                          <button onClick={() => toggleTask(task.id)}
-                            style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, marginTop: '2px', color: isDone ? '#16A34A' : '#D1D5DB', flexShrink: 0 }}>
-                            {isDone ? <I.CheckFill size={24} /> : <I.Circle size={24} />}
-                          </button>
-
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', flexWrap: 'wrap', marginBottom: '4px' }}>
-                              <h4 style={{
-                                fontSize: '14px', fontWeight: 700, margin: 0,
-                                color: isDone ? '#6B7280' : '#1F2937',
-                                textDecoration: isDone ? 'line-through' : 'none',
-                                lineHeight: 1.4, flex: 1,
-                              }}>{task.title}</h4>
-                              <span style={{
-                                fontSize: '10px', fontWeight: 700, padding: '2px 7px',
-                                borderRadius: '10px', background: priority.bg, color: priority.color,
-                                whiteSpace: 'nowrap',
-                              }}>{priority.label}</span>
-                              {editMode && (
-                                <div style={{ display: 'flex', gap: '3px' }}>
-                                  <button onClick={() => setTaskModalState({ mode: 'edit', task })} style={iconBtnStyle('#7C2D12')} title="편집">
-                                    <I.Pencil size={12} />
-                                  </button>
-                                  <button onClick={() => deleteTask(task.id)} style={iconBtnStyle('#DC2626')} title="삭제">
-                                    <I.Trash size={12} />
-                                  </button>
-                                </div>
-                              )}
-                            </div>
-
-                            {task.detail && <p style={{ fontSize: '12px', color: '#6B7280', margin: '0 0 10px 0', lineHeight: 1.6 }}>{task.detail}</p>}
-
-                            {editingMemo === task.id ? (
-                              <MemoEditor initial={memo} onSave={(m) => saveMemo(task.id, m)} onCancel={() => setEditingMemo(null)} />
-                            ) : memo ? (
-                              <div onClick={() => setEditingMemo(task.id)}
-                                style={{
-                                  background: '#FFFBEB', border: '1px solid #FEF3C7', borderRadius: '8px',
-                                  padding: '7px 11px', fontSize: '12px', color: '#92400E', marginBottom: '10px',
-                                  cursor: 'pointer', display: 'flex', justifyContent: 'space-between',
-                                  alignItems: 'flex-start', gap: '6px',
-                                }}>
-                                <span>💬 {memo}</span>
-                                <I.Edit size={11} style={{ opacity: 0.6, flexShrink: 0, marginTop: '2px' }} />
-                              </div>
-                            ) : null}
-
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                              <select value={status.assignee || task.defaultAssignee}
-                                onChange={(e) => changeAssignee(task.id, e.target.value)}
-                                style={{
-                                  padding: '4px 22px 4px 9px', fontSize: '11px', borderRadius: '13px',
-                                  border: `1.5px solid ${assignee.color}33`, background: `${assignee.color}10`,
-                                  color: assignee.color, fontWeight: 700, cursor: 'pointer', appearance: 'none',
-                                  backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='${encodeURIComponent(assignee.color)}' stroke-width='3'%3e%3cpolyline points='6 9 12 15 18 9'/%3e%3c/svg%3e")`,
-                                  backgroundRepeat: 'no-repeat', backgroundPosition: 'right 7px center',
-                                }}>
-                                {members.map(m => <option key={m.id} value={m.id}>{m.icon} {m.name}</option>)}
-                              </select>
-
-                              {!memo && editingMemo !== task.id && (
-                                <button onClick={() => setEditingMemo(task.id)}
-                                  style={{
-                                    padding: '3px 9px', fontSize: '10px', background: 'transparent',
-                                    border: '1px dashed #D1D5DB', borderRadius: '13px', color: '#6B7280',
-                                    cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '3px',
-                                  }}>
-                                  <I.Edit size={10} /> 메모
-                                </button>
-                              )}
-
-                              {status.completedAt && (
-                                <span style={{ fontSize: '10px', color: '#16A34A', marginLeft: 'auto' }}>
-                                  ✓ {new Date(status.completedAt).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' })}
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-
-                  {editMode && (
-                    <button onClick={() => setTaskModalState({ mode: 'add', phase: phase.id })}
-                      style={{
-                        width: '100%', padding: '12px',
-                        background: 'transparent', border: `2px dashed ${phase.color}66`,
-                        borderRadius: '12px', color: phase.color,
-                        fontSize: '12px', fontWeight: 700, cursor: 'pointer',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', marginTop: '8px',
-                      }}>
-                      <I.Plus size={13} /> {phase.label}에 새 항목 추가
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-          );
-        })}
+        {viewMode === 'list' ? (
+          <ListView
+            tasks={tasks} taskStatus={taskStatus} members={members} editMode={editMode}
+            collapsedPhases={collapsedPhases} togglePhase={togglePhase}
+            phaseStats={phaseStats} filterTasks={filterTasks} getMember={getMember}
+            priorityLabels={priorityLabels} editingMemo={editingMemo} setEditingMemo={setEditingMemo}
+            toggleTask={toggleTask} changeAssignee={changeAssignee} saveMemo={saveMemo}
+            setTaskModalState={setTaskModalState} deleteTask={deleteTask}
+            filterAssignee={filterAssignee} filterStatus={filterStatus}
+          />
+        ) : (
+          <CalendarView
+            tasks={filterTasks(tasks)} taskStatus={taskStatus} members={members}
+            tripInfo={tripInfo} today={today} getMember={getMember}
+            priorityLabels={priorityLabels} toggleTask={toggleTask}
+            setTaskModalState={setTaskModalState} editMode={editMode}
+            departureDate={departureDate}
+          />
+        )}
       </main>
 
       <footer style={{ maxWidth: '1200px', margin: '32px auto 0', padding: '0 16px' }}>
-        <div style={{
-          background: 'linear-gradient(135deg, #FEF3C7 0%, #FED7AA 100%)',
-          borderRadius: '18px', padding: '22px', border: '1px solid #FDBA74',
-        }}>
+        <div style={{ background: 'linear-gradient(135deg, #FEF3C7 0%, #FED7AA 100%)', borderRadius: '18px', padding: '22px', border: '1px solid #FDBA74' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px' }}>
             <I.Share size={18} stroke="#9A3412" />
             <h3 style={{ fontSize: '16px', fontWeight: 800, color: '#7C2D12', margin: 0 }}>가족과 함께 사용하세요</h3>
           </div>
           <p style={{ fontSize: '13px', color: '#7C2D12', margin: '0 0 14px 0', lineHeight: 1.7 }}>
             이 페이지는 Firebase로 실시간 동기화됩니다. 가족 누구나 같은 링크로 접속하면 동일한 진행 상황을 보실 수 있습니다.
-            폰에서 홈 화면에 추가하면 앱처럼 쓰실 수 있어요.
           </p>
           <button onClick={() => setShowShareModal(true)} style={primaryBtnStyle}>
             <I.Share size={13} /> 가족에게 공유 링크 보내기
           </button>
         </div>
-
         <div style={{ textAlign: 'center', marginTop: '20px', fontSize: '11px', color: '#9CA3AF' }}>
-          🍁 장인어른 · 장모님 칠순 여행 준비 보드 · JAPAN AUTUMN 2026 🍂
+          🍁 장인어른 · 장모님 칠순 여행 준비 보드 🍂
         </div>
       </footer>
 
-      {showMemberManager && (
-        <MemberManagerModal members={members} onClose={() => setShowMemberManager(false)}
-          onAdd={addMember} onUpdate={updateMember} onDelete={deleteMember} />
-      )}
-      {taskModalState && (
-        <TaskEditorModal mode={taskModalState.mode} task={taskModalState.task} phaseId={taskModalState.phase}
-          members={members} onClose={() => setTaskModalState(null)}
-          onSave={(data) => {
-            if (taskModalState.mode === 'add') addTask(data.phase, data);
-            else updateTask(taskModalState.task.id, data);
-            setTaskModalState(null);
-          }} />
-      )}
+      {showMemberManager && <MemberManagerModal members={members} onClose={() => setShowMemberManager(false)} onAdd={addMember} onUpdate={updateMember} onDelete={deleteMember} />}
+      {taskModalState && <TaskEditorModal mode={taskModalState.mode} task={taskModalState.task} phaseId={taskModalState.phase} members={members} onClose={() => setTaskModalState(null)} onSave={(data) => { if (taskModalState.mode === 'add') addTask(data.phase, data); else updateTask(taskModalState.task.id, data); setTaskModalState(null); }} />}
       {showShareModal && <ShareModal onClose={() => setShowShareModal(false)} />}
+      {showTripInfoModal && <TripInfoModal tripInfo={tripInfo} onClose={() => setShowTripInfoModal(false)} onSave={saveTripInfo} />}
+
+      <style>{`
+        @keyframes fly { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-10px) rotate(15deg); } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @media print { header { -webkit-print-color-adjust: exact; print-color-adjust: exact; } button, select { display: none !important; } }
+        select:focus, button:focus, textarea:focus, input:focus { outline: 2px solid #7C2D12; outline-offset: 2px; }
+      `}</style>
     </div>
   );
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// 보조 컴포넌트
+// 리스트 뷰
+// ═══════════════════════════════════════════════════════════════════
+function ListView(props) {
+  const { tasks, taskStatus, members, editMode, collapsedPhases, togglePhase, phaseStats, filterTasks, getMember, priorityLabels, editingMemo, setEditingMemo, toggleTask, changeAssignee, saveMemo, setTaskModalState, deleteTask, filterAssignee, filterStatus } = props;
+
+  // 페이즈 라벨을 출발일 기준으로 동적 계산
+  const getPhaseLabel = (phase) => {
+    const phaseTasks = tasks.filter(t => t.phase === phase.id);
+    if (phaseTasks.length === 0) return phase.subtitle;
+    const dates = phaseTasks.map(t => parseDate(t.dueDate)).filter(Boolean);
+    if (dates.length === 0) return phase.subtitle;
+    const minDate = new Date(Math.min(...dates));
+    const maxDate = new Date(Math.max(...dates));
+    if (minDate.getMonth() === maxDate.getMonth()) {
+      return `${minDate.getMonth()+1}월`;
+    }
+    return `${minDate.getMonth()+1}월~${maxDate.getMonth()+1}월`;
+  };
+
+  return (
+    <>
+      {PHASES.map((phase, phaseIdx) => {
+        const phaseTasks = tasks.filter(t => t.phase === phase.id);
+        const filteredTasks = filterTasks(phaseTasks);
+        const ps = phaseStats[phase.id];
+        const isCollapsed = collapsedPhases[phase.id];
+        const allDone = ps && ps.total > 0 && ps.done === ps.total;
+        const phaseLabel = getPhaseLabel(phase);
+
+        if (filteredTasks.length === 0 && phaseTasks.length > 0 && (filterAssignee !== 'all' || filterStatus !== 'all') && !editMode) return null;
+
+        return (
+          <div key={phase.id} style={{ marginBottom: '18px', position: 'relative' }}>
+            <div onClick={() => togglePhase(phase.id)} style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '14px 18px', background: allDone ? '#F0FDF4' : phase.bg, borderRadius: '14px', cursor: 'pointer', border: `2px solid ${allDone ? '#86EFAC' : phase.color}33`, marginBottom: '10px' }}>
+              <div style={{ minWidth: '48px', height: '48px', borderRadius: '50%', background: allDone ? '#16A34A' : phase.color, color: 'white', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: '12px', lineHeight: 1, boxShadow: `0 5px 14px ${phase.color}40` }}>
+                {allDone ? <I.CheckFill size={22} /> : <>
+                  <div style={{ fontSize: '8px', opacity: 0.8, fontWeight: 600 }}>{phase.name}</div>
+                  <div style={{ fontSize: '10px', marginTop: '2px' }}>{phaseIdx + 1}/10</div>
+                </>}
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', flexWrap: 'wrap' }}>
+                  <h3 style={{ fontSize: '17px', fontWeight: 800, margin: 0, color: phase.color }}>{phaseLabel}</h3>
+                  <span style={{ fontSize: '12px', color: phase.color, opacity: 0.8 }}>{phase.subtitle}</span>
+                </div>
+                <div style={{ fontSize: '11px', color: '#6B7280', marginTop: '3px' }}>{ps.done}/{ps.total} 완료</div>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '60px', height: '5px', background: 'rgba(0,0,0,0.08)', borderRadius: '3px', overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${ps.percent}%`, background: allDone ? '#16A34A' : phase.color, transition: 'width 0.5s' }} />
+                </div>
+                <span style={{ fontSize: '13px', fontWeight: 700, color: phase.color, minWidth: '34px', textAlign: 'right' }}>{ps.percent}%</span>
+                {isCollapsed ? <I.ChevronDown size={16} stroke={phase.color} /> : <I.ChevronUp size={16} stroke={phase.color} />}
+              </div>
+            </div>
+
+            {!isCollapsed && (
+              <div style={{ paddingLeft: '20px', borderLeft: `3px solid ${phase.color}`, marginLeft: '24px' }}>
+                {filteredTasks.map((task) => {
+                  const status = taskStatus[task.id] || {};
+                  const assignee = getMember(status.assignee || task.defaultAssignee);
+                  const isDone = status.done;
+                  const memo = status.memo || '';
+                  const priority = priorityLabels[task.priority];
+                  const taskDate = task.dueDate ? parseDate(task.dueDate) : null;
+
+                  return (
+                    <div key={task.id} style={{ background: 'white', borderRadius: '12px', padding: '14px', marginBottom: '8px', border: `1px solid ${isDone ? '#D1FAE5' : '#F3F0EB'}`, position: 'relative', opacity: isDone ? 0.7 : 1, boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+                      <div style={{ position: 'absolute', left: -23, top: '18px', width: '10px', height: '10px', background: isDone ? '#16A34A' : assignee.color, borderRadius: '50%', border: '3px solid #FEF6E4', boxShadow: `0 0 0 2px ${isDone ? '#16A34A' : assignee.color}` }} />
+                      <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+                        <button onClick={() => toggleTask(task.id)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, marginTop: '2px', color: isDone ? '#16A34A' : '#D1D5DB', flexShrink: 0 }}>
+                          {isDone ? <I.CheckFill size={24} /> : <I.Circle size={24} />}
+                        </button>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', flexWrap: 'wrap', marginBottom: '4px' }}>
+                            <h4 style={{ fontSize: '14px', fontWeight: 700, margin: 0, color: isDone ? '#6B7280' : '#1F2937', textDecoration: isDone ? 'line-through' : 'none', lineHeight: 1.4, flex: 1 }}>{task.title}</h4>
+                            <span style={{ fontSize: '10px', fontWeight: 700, padding: '2px 7px', borderRadius: '10px', background: priority.bg, color: priority.color, whiteSpace: 'nowrap' }}>{priority.label}</span>
+                            {editMode && (
+                              <div style={{ display: 'flex', gap: '3px' }}>
+                                <button onClick={() => setTaskModalState({ mode: 'edit', task })} style={iconBtnStyle('#7C2D12')} title="편집"><I.Pencil size={12} /></button>
+                                <button onClick={() => deleteTask(task.id)} style={iconBtnStyle('#DC2626')} title="삭제"><I.Trash size={12} /></button>
+                              </div>
+                            )}
+                          </div>
+
+                          {task.detail && <p style={{ fontSize: '12px', color: '#6B7280', margin: '0 0 10px 0', lineHeight: 1.6 }}>{task.detail}</p>}
+
+                          {editingMemo === task.id ? (
+                            <MemoEditor initial={memo} onSave={(m) => saveMemo(task.id, m)} onCancel={() => setEditingMemo(null)} />
+                          ) : memo ? (
+                            <div onClick={() => setEditingMemo(task.id)} style={{ background: '#FFFBEB', border: '1px solid #FEF3C7', borderRadius: '8px', padding: '7px 11px', fontSize: '12px', color: '#92400E', marginBottom: '10px', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '6px' }}>
+                              <span>💬 {memo}</span><I.Edit size={11} style={{ opacity: 0.6, flexShrink: 0, marginTop: '2px' }} />
+                            </div>
+                          ) : null}
+
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                            {taskDate && (
+                              <span style={{ fontSize: '11px', color: '#7C2D12', fontWeight: 600, background: '#FEF3C7', padding: '2px 8px', borderRadius: '10px', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                                <I.Calendar size={10} /> {taskDate.getMonth()+1}/{taskDate.getDate()}({dayOfWeekKor(taskDate)})
+                              </span>
+                            )}
+                            <select value={status.assignee || task.defaultAssignee} onChange={(e) => changeAssignee(task.id, e.target.value)} style={{ padding: '4px 22px 4px 9px', fontSize: '11px', borderRadius: '13px', border: `1.5px solid ${assignee.color}33`, background: `${assignee.color}10`, color: assignee.color, fontWeight: 700, cursor: 'pointer', appearance: 'none', backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='${encodeURIComponent(assignee.color)}' stroke-width='3'%3e%3cpolyline points='6 9 12 15 18 9'/%3e%3c/svg%3e")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 7px center' }}>
+                              {members.map(m => <option key={m.id} value={m.id}>{m.icon} {m.name}</option>)}
+                            </select>
+                            {!memo && editingMemo !== task.id && (
+                              <button onClick={() => setEditingMemo(task.id)} style={{ padding: '3px 9px', fontSize: '10px', background: 'transparent', border: '1px dashed #D1D5DB', borderRadius: '13px', color: '#6B7280', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                                <I.Edit size={10} /> 메모
+                              </button>
+                            )}
+                            {status.completedAt && <span style={{ fontSize: '10px', color: '#16A34A', marginLeft: 'auto' }}>✓ {new Date(status.completedAt).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' })}</span>}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {editMode && (
+                  <button onClick={() => setTaskModalState({ mode: 'add', phase: phase.id })} style={{ width: '100%', padding: '12px', background: 'transparent', border: `2px dashed ${phase.color}66`, borderRadius: '12px', color: phase.color, fontSize: '12px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', marginTop: '8px' }}>
+                    <I.Plus size={13} /> {phaseLabel}에 새 항목 추가
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// 캘린더 뷰
+// ═══════════════════════════════════════════════════════════════════
+function CalendarView({ tasks, taskStatus, members, tripInfo, today, getMember, priorityLabels, toggleTask, setTaskModalState, editMode, departureDate }) {
+  // 출발 월을 기본 표시 월로
+  const [curYear, setCurYear] = useState(today.getFullYear());
+  const [curMonth, setCurMonth] = useState(today.getMonth() + 1);
+  const [selectedDate, setSelectedDate] = useState(formatDateKey(today));
+
+  const taskMap = useMemo(() => {
+    const m = {};
+    tasks.forEach(t => {
+      if (!t.dueDate) return;
+      if (!m[t.dueDate]) m[t.dueDate] = [];
+      m[t.dueDate].push(t);
+    });
+    return m;
+  }, [tasks]);
+
+  const todayKey = formatDateKey(today);
+  const ddayKey = departureDate ? formatDateKey(departureDate) : null;
+  const selectedTasks = selectedDate ? (taskMap[selectedDate] || []) : [];
+
+  const prevMonth = () => {
+    if (curMonth === 1) { setCurMonth(12); setCurYear(curYear - 1); }
+    else setCurMonth(curMonth - 1);
+  };
+  const nextMonth = () => {
+    if (curMonth === 12) { setCurMonth(1); setCurYear(curYear + 1); }
+    else setCurMonth(curMonth + 1);
+  };
+  const goToToday = () => {
+    setCurYear(today.getFullYear());
+    setCurMonth(today.getMonth() + 1);
+    setSelectedDate(todayKey);
+  };
+  const goToDday = () => {
+    if (!departureDate) return;
+    setCurYear(departureDate.getFullYear());
+    setCurMonth(departureDate.getMonth() + 1);
+    setSelectedDate(ddayKey);
+  };
+
+  const firstDay = new Date(curYear, curMonth - 1, 1);
+  const startDow = firstDay.getDay();
+  const daysInMonth = new Date(curYear, curMonth, 0).getDate();
+  const prevMonthDays = new Date(curYear, curMonth - 1, 0).getDate();
+  const totalCells = startDow + daysInMonth;
+  const remainCells = (Math.ceil(totalCells / 7) * 7) - totalCells;
+
+  const cells = [];
+  for (let i = startDow - 1; i >= 0; i--) {
+    cells.push({ outside: true, day: prevMonthDays - i, key: `p-${i}` });
+  }
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateKey = formatDateKey(new Date(curYear, curMonth - 1, d));
+    cells.push({ outside: false, day: d, key: dateKey, dateKey });
+  }
+  for (let d = 1; d <= remainCells; d++) {
+    cells.push({ outside: true, day: d, key: `n-${d}` });
+  }
+
+  return (
+    <div style={{ background: 'white', borderRadius: '16px', padding: '18px', border: '1px solid #F3F0EB', boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
+        <div>
+          <h2 style={{ fontSize: '22px', fontWeight: 800, color: '#7C2D12', margin: 0, letterSpacing: '-0.02em' }}>{curYear}년 {curMonth}월</h2>
+          <p style={{ fontSize: '12px', color: '#9CA3AF', margin: '2px 0 0 0' }}>날짜를 클릭하면 그 날의 준비사항이 보입니다</p>
+        </div>
+        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+          <button onClick={prevMonth} style={navBtnStyle}><I.ChevronLeft size={16} /></button>
+          <button onClick={goToToday} style={{ ...navBtnStyle, width: 'auto', padding: '0 12px', fontSize: '12px', fontWeight: 700 }}>오늘</button>
+          <button onClick={goToDday} style={{ ...navBtnStyle, width: 'auto', padding: '0 12px', fontSize: '12px', fontWeight: 700, background: '#FEF3C7', color: '#7C2D12', border: '1px solid #FDE68A' }}>D-DAY</button>
+          <button onClick={nextMonth} style={navBtnStyle}><I.ChevronRight size={16} /></button>
+        </div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px', marginBottom: '6px' }}>
+        {['일','월','화','수','목','금','토'].map((d, i) => (
+          <div key={d} style={{ fontSize: '11px', textAlign: 'center', padding: '4px 0', fontWeight: 600, color: i === 0 ? '#C2410C' : (i === 6 ? '#1E40AF' : '#9CA3AF') }}>{d}</div>
+        ))}
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px' }}>
+        {cells.map((cell, idx) => {
+          if (cell.outside) {
+            const dow = idx % 7;
+            return <div key={cell.key} style={{ minHeight: '70px', padding: '5px 6px', borderRadius: '8px', opacity: 0.25 }}>
+              <div style={{ fontSize: '12px', color: dow === 0 ? '#C2410C' : (dow === 6 ? '#1E40AF' : '#1F2937') }}>{cell.day}</div>
+            </div>;
+          }
+
+          const dateKey = cell.dateKey;
+          const cellDate = new Date(curYear, curMonth - 1, cell.day);
+          const dow = cellDate.getDay();
+          const isToday = dateKey === todayKey;
+          const isDday = dateKey === ddayKey;
+          const isSelected = dateKey === selectedDate;
+          const dayTasks = taskMap[dateKey] || [];
+          const doneCount = dayTasks.filter(t => taskStatus[t.id]?.done).length;
+          const allDone = dayTasks.length > 0 && doneCount === dayTasks.length;
+
+          let bg = 'white';
+          let border = '0.5px solid #F3F0EB';
+          if (isDday) { bg = '#7C2D12'; border = '2px solid #7C2D12'; }
+          else if (isSelected) { bg = '#FED7AA'; border = '2px solid #7C2D12'; }
+          else if (isToday) { bg = '#FEF6E4'; border = '1.5px solid #C2410C'; }
+
+          return (
+            <div key={cell.key} onClick={() => setSelectedDate(dateKey)}
+              style={{ minHeight: '70px', padding: '5px 6px', background: bg, border, borderRadius: '8px', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '3px', position: 'relative', transition: 'transform 0.1s' }}
+              onMouseEnter={e => { if (!isSelected && !isDday) e.currentTarget.style.background = '#FAFAF9'; }}
+              onMouseLeave={e => { if (!isSelected && !isDday) e.currentTarget.style.background = bg; }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                <span style={{ fontSize: '12px', fontWeight: isToday || isDday || isSelected ? 700 : 500, color: isDday ? 'white' : (dow === 0 ? '#C2410C' : (dow === 6 ? '#1E40AF' : '#1F2937')) }}>{cell.day}</span>
+                {dayTasks.length > 0 && !isDday && (
+                  <span style={{ fontSize: '9px', color: allDone ? '#16A34A' : '#9CA3AF', fontWeight: 600 }}>
+                    {allDone ? '✓' : `${doneCount}/${dayTasks.length}`}
+                  </span>
+                )}
+              </div>
+              {isDday && (
+                <div style={{ fontSize: '20px', textAlign: 'center', flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✈</div>
+              )}
+              {!isDday && dayTasks.length > 0 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '2px', marginTop: 'auto' }}>
+                  {dayTasks.slice(0, 5).map((t, i) => {
+                    const m = getMember(taskStatus[t.id]?.assignee || t.defaultAssignee);
+                    const done = taskStatus[t.id]?.done;
+                    return <span key={i} style={{ width: '7px', height: '7px', borderRadius: '50%', background: m.color, opacity: done ? 0.35 : 1, border: done ? '1.5px solid #16A34A' : 'none', boxSizing: 'content-box' }} />;
+                  })}
+                  {dayTasks.length > 5 && <span style={{ fontSize: '9px', color: '#9CA3AF', lineHeight: '7px' }}>+{dayTasks.length - 5}</span>}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* 범례 */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', marginTop: '14px', padding: '10px 12px', background: '#FAFAF9', borderRadius: '10px', fontSize: '11px' }}>
+        {members.filter(m => m.id !== 'unassigned').map(m => (
+          <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#6B7280' }}>
+            <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: m.color }} /> {m.name}
+          </div>
+        ))}
+      </div>
+
+      {/* 선택 날짜 상세 */}
+      <div style={{ marginTop: '14px', padding: '14px 16px', background: '#FAFAF9', borderRadius: '12px', minHeight: '80px' }}>
+        {selectedDate ? (
+          <>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px', flexWrap: 'wrap', gap: '6px' }}>
+              <div style={{ fontSize: '15px', fontWeight: 700, color: '#7C2D12' }}>
+                {selectedDate.split('-')[1]}월 {selectedDate.split('-')[2]}일 ({dayOfWeekKor(parseDate(selectedDate))})
+                {selectedDate === ddayKey && <span style={{ marginLeft: '6px', fontSize: '12px', background: '#7C2D12', color: 'white', padding: '2px 8px', borderRadius: '8px' }}>✈ D-DAY</span>}
+                {selectedDate === todayKey && <span style={{ marginLeft: '6px', fontSize: '11px', background: '#FEF3C7', color: '#7C2D12', padding: '2px 8px', borderRadius: '8px' }}>오늘</span>}
+              </div>
+              <div style={{ fontSize: '11px', color: '#9CA3AF' }}>
+                {selectedTasks.length}개 항목 · {selectedTasks.filter(t => taskStatus[t.id]?.done).length} 완료
+              </div>
+            </div>
+
+            {selectedTasks.length === 0 ? (
+              <div style={{ fontSize: '13px', color: '#9CA3AF', padding: '10px 0' }}>이 날에는 등록된 준비사항이 없습니다.</div>
+            ) : (
+              <div>
+                {selectedTasks.map(task => {
+                  const status = taskStatus[task.id] || {};
+                  const assignee = getMember(status.assignee || task.defaultAssignee);
+                  const isDone = status.done;
+                  const priority = priorityLabels[task.priority];
+                  return (
+                    <div key={task.id} style={{ display: 'flex', gap: '10px', padding: '10px 0', borderTop: '0.5px solid #E7E2D6', alignItems: 'flex-start' }}>
+                      <button onClick={() => toggleTask(task.id)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0, color: isDone ? '#16A34A' : '#D1D5DB', flexShrink: 0, marginTop: '2px' }}>
+                        {isDone ? <I.CheckFill size={20} /> : <I.Circle size={20} />}
+                      </button>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: '13px', fontWeight: 600, color: isDone ? '#9CA3AF' : '#1F2937', textDecoration: isDone ? 'line-through' : 'none', marginBottom: '3px' }}>{task.title}</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', fontSize: '11px' }}>
+                          <span style={{ color: assignee.color, fontWeight: 600 }}>{assignee.icon} {assignee.name}</span>
+                          <span style={{ background: priority.bg, color: priority.color, padding: '1px 7px', borderRadius: '8px', fontSize: '10px', fontWeight: 700 }}>{priority.label}</span>
+                          {editMode && <button onClick={() => setTaskModalState({ mode: 'edit', task })} style={{ marginLeft: 'auto', padding: '2px 8px', fontSize: '10px', background: '#FEF3C7', color: '#7C2D12', border: '1px solid #FDE68A', borderRadius: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '3px' }}><I.Pencil size={9} /> 편집</button>}
+                        </div>
+                        {task.detail && <p style={{ fontSize: '11px', color: '#6B7280', margin: '4px 0 0 0', lineHeight: 1.5 }}>{task.detail}</p>}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </>
+        ) : (
+          <div style={{ fontSize: '13px', color: '#9CA3AF' }}>날짜를 선택해주세요</div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+const navBtnStyle = { width: '32px', height: '32px', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '1px solid #E7E2D6', borderRadius: '10px', background: 'white', cursor: 'pointer', color: '#7C2D12' };
+
+// ═══════════════════════════════════════════════════════════════════
+// 보조 컴포넌트들
 // ═══════════════════════════════════════════════════════════════════
 function ConnectionPill({ status }) {
   const config = {
@@ -903,28 +1075,29 @@ function ConnectionPill({ status }) {
     error: { bg: 'rgba(255,100,100,0.2)', color: '#FEE2E2', icon: <I.WifiOff size={10} />, text: '연결 실패' },
   }[status] || { bg: 'rgba(255,255,255,0.1)', color: 'white', icon: null, text: '' };
   return (
-    <span style={{
-      display: 'inline-flex', alignItems: 'center', gap: '4px',
-      padding: '2px 8px', borderRadius: '10px',
-      background: config.bg, color: config.color, fontSize: '10px', fontWeight: 600,
-    }}>
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '2px 8px', borderRadius: '10px', background: config.bg, color: config.color, fontSize: '10px', fontWeight: 600 }}>
       {config.icon} {config.text}
     </span>
   );
 }
 
-function StatCard({ label, value, sub, progress }) {
+function StatCard({ label, value, sub, progress, editable, onEdit }) {
   return (
-    <div style={{
-      background: 'rgba(255,255,255,0.12)', backdropFilter: 'blur(10px)',
-      borderRadius: '14px', padding: '16px', border: '1px solid rgba(255,255,255,0.2)',
-    }}>
+    <div onClick={editable ? onEdit : undefined}
+      style={{ background: 'rgba(255,255,255,0.12)', backdropFilter: 'blur(10px)', borderRadius: '14px', padding: '16px', border: editable ? '1px dashed rgba(255,255,255,0.5)' : '1px solid rgba(255,255,255,0.2)', position: 'relative', cursor: editable ? 'pointer' : 'default', transition: 'all 0.2s' }}
+      onMouseEnter={(e) => { if (editable) e.currentTarget.style.background = 'rgba(255,255,255,0.2)'; }}
+      onMouseLeave={(e) => { if (editable) e.currentTarget.style.background = 'rgba(255,255,255,0.12)'; }}>
       <div style={{ fontSize: '10px', opacity: 0.8, marginBottom: '4px', letterSpacing: '0.1em', display: 'flex', alignItems: 'center', gap: '3px' }}>{label}</div>
       <div style={{ fontSize: '32px', fontWeight: 800, lineHeight: 1 }}>{value}</div>
       <div style={{ fontSize: '12px', opacity: 0.85, marginTop: '5px', display: 'flex', alignItems: 'center', gap: '3px' }}>{sub}</div>
       {progress !== undefined && (
         <div style={{ height: '3px', background: 'rgba(255,255,255,0.2)', borderRadius: '2px', marginTop: '6px', overflow: 'hidden' }}>
           <div style={{ height: '100%', width: `${progress}%`, background: '#FDE68A', transition: 'width 0.5s' }} />
+        </div>
+      )}
+      {editable && (
+        <div style={{ position: 'absolute', top: '8px', right: '8px', background: 'rgba(255,255,255,0.25)', borderRadius: '6px', padding: '3px', display: 'flex' }}>
+          <I.Pencil size={10} />
         </div>
       )}
     </div>
@@ -935,24 +1108,10 @@ function MemoEditor({ initial, onSave, onCancel }) {
   const [value, setValue] = useState(initial || '');
   return (
     <div style={{ marginBottom: '10px' }}>
-      <textarea value={value} onChange={(e) => setValue(e.target.value)} autoFocus
-        placeholder="메모를 입력하세요. (예: 영등포 구청 6월 10일 예약 완료)"
-        style={{
-          width: '100%', minHeight: '60px', padding: '9px 11px', fontSize: '12px',
-          border: '1.5px solid #FDBA74', borderRadius: '9px', resize: 'vertical',
-          background: '#FFFBEB', color: '#1F2937', boxSizing: 'border-box',
-        }} />
+      <textarea value={value} onChange={(e) => setValue(e.target.value)} autoFocus placeholder="메모 입력" style={{ width: '100%', minHeight: '60px', padding: '9px 11px', fontSize: '12px', border: '1.5px solid #FDBA74', borderRadius: '9px', resize: 'vertical', background: '#FFFBEB', color: '#1F2937', boxSizing: 'border-box' }} />
       <div style={{ display: 'flex', gap: '5px', marginTop: '5px' }}>
-        <button onClick={() => onSave(value)} style={{
-          padding: '4px 12px', fontSize: '11px', background: '#7C2D12', color: 'white',
-          border: 'none', borderRadius: '12px', cursor: 'pointer', fontWeight: 600,
-          display: 'flex', alignItems: 'center', gap: '3px',
-        }}><I.Save size={11} /> 저장</button>
-        <button onClick={onCancel} style={{
-          padding: '4px 12px', fontSize: '11px', background: 'white', color: '#6B7280',
-          border: '1px solid #E7E2D6', borderRadius: '12px', cursor: 'pointer', fontWeight: 600,
-          display: 'flex', alignItems: 'center', gap: '3px',
-        }}><I.X size={11} /> 취소</button>
+        <button onClick={() => onSave(value)} style={{ padding: '4px 12px', fontSize: '11px', background: '#7C2D12', color: 'white', border: 'none', borderRadius: '12px', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '3px' }}><I.Save size={11} /> 저장</button>
+        <button onClick={onCancel} style={{ padding: '4px 12px', fontSize: '11px', background: 'white', color: '#6B7280', border: '1px solid #E7E2D6', borderRadius: '12px', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '3px' }}><I.X size={11} /> 취소</button>
       </div>
     </div>
   );
@@ -975,29 +1134,15 @@ function MemberManagerModal({ members, onClose, onAdd, onUpdate, onDelete }) {
     <ModalOverlay onClose={onClose}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px' }}>
         <h2 style={{ fontSize: '18px', fontWeight: 800, margin: 0, color: '#7C2D12' }}>담당자 관리</h2>
-        <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px', color: '#6B7280' }}>
-          <I.X size={20} />
-        </button>
+        <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px', color: '#6B7280' }}><I.X size={20} /></button>
       </div>
-
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '14px' }}>
         {members.filter(m => m.id !== 'unassigned').map(m => (
           editingId === m.id ? (
-            <MemberEditRow key={m.id} member={m}
-              onSave={(data) => { onUpdate(m.id, data); setEditingId(null); }}
-              onCancel={() => setEditingId(null)} />
+            <MemberEditRow key={m.id} member={m} onSave={(data) => { onUpdate(m.id, data); setEditingId(null); }} onCancel={() => setEditingId(null)} />
           ) : (
-            <div key={m.id} style={{
-              display: 'flex', alignItems: 'center', gap: '10px',
-              padding: '10px 12px', background: '#FAFAF9',
-              borderRadius: '10px', border: '1px solid #F3F0EB',
-            }}>
-              <div style={{
-                width: '34px', height: '34px', borderRadius: '50%',
-                background: `${m.color}20`, display: 'flex',
-                alignItems: 'center', justifyContent: 'center', fontSize: '18px',
-                border: `2px solid ${m.color}40`, flexShrink: 0,
-              }}>{m.icon}</div>
+            <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px 12px', background: '#FAFAF9', borderRadius: '10px', border: '1px solid #F3F0EB' }}>
+              <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: `${m.color}20`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px', border: `2px solid ${m.color}40`, flexShrink: 0 }}>{m.icon}</div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: '13px', fontWeight: 700, color: m.color, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{m.name}</div>
                 <div style={{ fontSize: '10px', color: '#9CA3AF', marginTop: '2px' }}>컬러 <span style={{ fontFamily: 'monospace' }}>{m.color}</span></div>
@@ -1008,7 +1153,6 @@ function MemberManagerModal({ members, onClose, onAdd, onUpdate, onDelete }) {
           )
         ))}
       </div>
-
       {showAddForm ? (
         <div style={{ padding: '14px', background: '#FFFBEB', borderRadius: '11px', border: '1.5px solid #FDE68A' }}>
           <h3 style={{ fontSize: '13px', fontWeight: 700, margin: '0 0 10px 0', color: '#7C2D12' }}>새 담당자 추가</h3>
@@ -1017,15 +1161,13 @@ function MemberManagerModal({ members, onClose, onAdd, onUpdate, onDelete }) {
           <label style={labelStyle}>아이콘</label>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', marginBottom: '10px' }}>
             {ICON_OPTIONS.map(ic => (
-              <button key={ic} onClick={() => setNewIcon(ic)}
-                style={{ width: '34px', height: '34px', fontSize: '18px', background: newIcon === ic ? '#FEF3C7' : 'white', border: newIcon === ic ? '2px solid #C2410C' : '1px solid #E7E2D6', borderRadius: '7px', cursor: 'pointer' }}>{ic}</button>
+              <button key={ic} onClick={() => setNewIcon(ic)} style={{ width: '34px', height: '34px', fontSize: '18px', background: newIcon === ic ? '#FEF3C7' : 'white', border: newIcon === ic ? '2px solid #C2410C' : '1px solid #E7E2D6', borderRadius: '7px', cursor: 'pointer' }}>{ic}</button>
             ))}
           </div>
           <label style={labelStyle}>색상</label>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px', marginBottom: '12px' }}>
             {COLOR_PALETTE.map(c => (
-              <button key={c} onClick={() => setNewColor(c)}
-                style={{ width: '30px', height: '30px', background: c, borderRadius: '50%', cursor: 'pointer', border: newColor === c ? '3px solid #1F2937' : '1px solid rgba(0,0,0,0.1)' }} />
+              <button key={c} onClick={() => setNewColor(c)} style={{ width: '30px', height: '30px', background: c, borderRadius: '50%', cursor: 'pointer', border: newColor === c ? '3px solid #1F2937' : '1px solid rgba(0,0,0,0.1)' }} />
             ))}
           </div>
           <div style={{ display: 'flex', gap: '6px' }}>
@@ -1034,13 +1176,7 @@ function MemberManagerModal({ members, onClose, onAdd, onUpdate, onDelete }) {
           </div>
         </div>
       ) : (
-        <button onClick={() => setShowAddForm(true)}
-          style={{
-            width: '100%', padding: '12px', background: 'transparent',
-            border: '2px dashed #C2410C66', borderRadius: '11px', color: '#C2410C',
-            fontSize: '12px', fontWeight: 700, cursor: 'pointer',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px',
-          }}>
+        <button onClick={() => setShowAddForm(true)} style={{ width: '100%', padding: '12px', background: 'transparent', border: '2px dashed #C2410C66', borderRadius: '11px', color: '#C2410C', fontSize: '12px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}>
           <I.UserPlus size={14} /> 새 담당자 추가
         </button>
       )}
@@ -1057,14 +1193,12 @@ function MemberEditRow({ member, onSave, onCancel }) {
       <input value={name} onChange={(e) => setName(e.target.value)} style={{ ...inputStyle, marginBottom: '8px' }} />
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px', marginBottom: '8px' }}>
         {ICON_OPTIONS.map(ic => (
-          <button key={ic} onClick={() => setIcon(ic)}
-            style={{ width: '30px', height: '30px', fontSize: '16px', background: icon === ic ? '#FEF3C7' : 'white', border: icon === ic ? '2px solid #C2410C' : '1px solid #E7E2D6', borderRadius: '6px', cursor: 'pointer' }}>{ic}</button>
+          <button key={ic} onClick={() => setIcon(ic)} style={{ width: '30px', height: '30px', fontSize: '16px', background: icon === ic ? '#FEF3C7' : 'white', border: icon === ic ? '2px solid #C2410C' : '1px solid #E7E2D6', borderRadius: '6px', cursor: 'pointer' }}>{ic}</button>
         ))}
       </div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '3px', marginBottom: '10px' }}>
         {COLOR_PALETTE.map(c => (
-          <button key={c} onClick={() => setColor(c)}
-            style={{ width: '26px', height: '26px', background: c, borderRadius: '50%', cursor: 'pointer', border: color === c ? '3px solid #1F2937' : '1px solid rgba(0,0,0,0.1)' }} />
+          <button key={c} onClick={() => setColor(c)} style={{ width: '26px', height: '26px', background: c, borderRadius: '50%', cursor: 'pointer', border: color === c ? '3px solid #1F2937' : '1px solid rgba(0,0,0,0.1)' }} />
         ))}
       </div>
       <div style={{ display: 'flex', gap: '5px' }}>
@@ -1081,10 +1215,11 @@ function TaskEditorModal({ mode, task, phaseId, members, onClose, onSave }) {
   const [priority, setPriority] = useState(task?.priority || 'medium');
   const [defaultAssignee, setDefaultAssignee] = useState(task?.defaultAssignee || 'unassigned');
   const [selectedPhase, setSelectedPhase] = useState(task?.phase || phaseId);
+  const [dueDate, setDueDate] = useState(task?.dueDate || '');
 
   const handleSave = () => {
     if (!title.trim()) { alert('제목을 입력해주세요.'); return; }
-    onSave({ title: title.trim(), detail: detail.trim(), priority, defaultAssignee, phase: selectedPhase });
+    onSave({ title: title.trim(), detail: detail.trim(), priority, defaultAssignee, phase: selectedPhase, dueDate: dueDate || undefined });
   };
 
   const phaseInfo = PHASES.find(p => p.id === selectedPhase);
@@ -1092,29 +1227,19 @@ function TaskEditorModal({ mode, task, phaseId, members, onClose, onSave }) {
   return (
     <ModalOverlay onClose={onClose}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px' }}>
-        <h2 style={{ fontSize: '18px', fontWeight: 800, margin: 0, color: '#7C2D12' }}>
-          {mode === 'add' ? '새 준비사항 추가' : '준비사항 편집'}
-        </h2>
+        <h2 style={{ fontSize: '18px', fontWeight: 800, margin: 0, color: '#7C2D12' }}>{mode === 'add' ? '새 준비사항 추가' : '준비사항 편집'}</h2>
         <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px', color: '#6B7280' }}><I.X size={20} /></button>
       </div>
-
       <label style={labelStyle}>시기 (페이즈)</label>
-      <select value={selectedPhase} onChange={(e) => setSelectedPhase(e.target.value)} style={{ ...inputStyle, marginBottom: '8px' }}>
-        {PHASES.map(p => <option key={p.id} value={p.id}>{p.name} — {p.label} ({p.subtitle})</option>)}
+      <select value={selectedPhase} onChange={(e) => setSelectedPhase(e.target.value)} style={{ ...inputStyle, marginBottom: '10px' }}>
+        {PHASES.map(p => <option key={p.id} value={p.id}>{p.name} — {p.subtitle}</option>)}
       </select>
-
-      {phaseInfo && (
-        <div style={{ padding: '7px 11px', fontSize: '11px', background: phaseInfo.bg, color: phaseInfo.color, borderRadius: '8px', marginBottom: '12px' }}>
-          📅 {phaseInfo.dMax > 0 ? `D-${phaseInfo.dMax} ~ D-${phaseInfo.dMin}` : 'D-Day'}
-        </div>
-      )}
-
+      <label style={labelStyle}>마감일 (선택)</label>
+      <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} style={{ ...inputStyle, marginBottom: '14px' }} />
       <label style={labelStyle}>제목 *</label>
       <input value={title} onChange={(e) => setTitle(e.target.value)} autoFocus placeholder="예: 어머님께 드릴 칠순 선물 준비" style={{ ...inputStyle, marginBottom: '12px' }} />
-
       <label style={labelStyle}>상세 설명</label>
       <textarea value={detail} onChange={(e) => setDetail(e.target.value)} placeholder="추가 안내 사항" style={{ ...inputStyle, minHeight: '60px', resize: 'vertical', marginBottom: '12px' }} />
-
       <label style={labelStyle}>우선순위</label>
       <div style={{ display: 'flex', gap: '5px', marginBottom: '12px', flexWrap: 'wrap' }}>
         {[
@@ -1123,26 +1248,72 @@ function TaskEditorModal({ mode, task, phaseId, members, onClose, onSave }) {
           { v: 'medium', l: '보통', c: '#854D0E', bg: '#FEF3C7' },
           { v: 'low', l: '여유', c: '#6B7280', bg: '#F3F4F6' },
         ].map(p => (
-          <button key={p.v} onClick={() => setPriority(p.v)}
-            style={{
-              padding: '7px 12px', fontSize: '11px', fontWeight: 700,
-              background: priority === p.v ? p.bg : 'white',
-              color: priority === p.v ? p.c : '#6B7280',
-              border: priority === p.v ? `2px solid ${p.c}` : '1px solid #E7E2D6',
-              borderRadius: '18px', cursor: 'pointer',
-            }}>{p.l}</button>
+          <button key={p.v} onClick={() => setPriority(p.v)} style={{ padding: '7px 12px', fontSize: '11px', fontWeight: 700, background: priority === p.v ? p.bg : 'white', color: priority === p.v ? p.c : '#6B7280', border: priority === p.v ? `2px solid ${p.c}` : '1px solid #E7E2D6', borderRadius: '18px', cursor: 'pointer' }}>{p.l}</button>
         ))}
       </div>
-
       <label style={labelStyle}>기본 담당자</label>
       <select value={defaultAssignee} onChange={(e) => setDefaultAssignee(e.target.value)} style={{ ...inputStyle, marginBottom: '18px' }}>
         {members.map(m => <option key={m.id} value={m.id}>{m.icon} {m.name}</option>)}
       </select>
+      <div style={{ display: 'flex', gap: '6px' }}>
+        <button onClick={handleSave} style={primaryBtnStyle}><I.Save size={13} /> {mode === 'add' ? '추가' : '저장'}</button>
+        <button onClick={onClose} style={secondaryBtnStyle}>취소</button>
+      </div>
+    </ModalOverlay>
+  );
+}
+
+function TripInfoModal({ tripInfo, onClose, onSave }) {
+  const [departureDate, setDepartureDate] = useState(tripInfo.departureDate);
+  const [destinationName, setDestinationName] = useState(tripInfo.destinationName);
+  const [destinationSub, setDestinationSub] = useState(tripInfo.destinationSub);
+  const [regionLabel, setRegionLabel] = useState(tripInfo.regionLabel);
+  const [recalcDueDates, setRecalcDueDates] = useState(true);
+
+  const handleSave = () => {
+    if (!departureDate) { alert('출발일을 입력해주세요.'); return; }
+    if (!destinationName.trim()) { alert('여행지를 입력해주세요.'); return; }
+    onSave({
+      departureDate,
+      destinationName: destinationName.trim(),
+      destinationSub: destinationSub.trim(),
+      regionLabel: regionLabel.trim() || tripInfo.regionLabel,
+    }, recalcDueDates);
+  };
+
+  const dateChanged = departureDate !== tripInfo.departureDate;
+
+  return (
+    <ModalOverlay onClose={onClose}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px' }}>
+        <h2 style={{ fontSize: '18px', fontWeight: 800, margin: 0, color: '#7C2D12' }}>✈ 여행 정보 편집</h2>
+        <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px', color: '#6B7280' }}><I.X size={20} /></button>
+      </div>
+
+      <label style={labelStyle}>출발일 *</label>
+      <input type="date" value={departureDate} onChange={(e) => setDepartureDate(e.target.value)} style={{ ...inputStyle, marginBottom: '14px' }} />
+
+      {dateChanged && (
+        <div style={{ padding: '12px 14px', background: '#FEF3C7', border: '1px solid #FDE68A', borderRadius: '10px', marginBottom: '14px' }}>
+          <div style={{ fontSize: '12px', color: '#7C2D12', fontWeight: 700, marginBottom: '6px' }}>⚠️ 출발일이 변경되었습니다</div>
+          <label style={{ display: 'flex', alignItems: 'flex-start', gap: '6px', fontSize: '12px', color: '#7C2D12', cursor: 'pointer', lineHeight: 1.5 }}>
+            <input type="checkbox" checked={recalcDueDates} onChange={(e) => setRecalcDueDates(e.target.checked)} style={{ marginTop: '2px', accentColor: '#7C2D12' }} />
+            <span>모든 준비사항 마감일을 새 출발일에 맞춰 자동으로 이동시키기 (권장)</span>
+          </label>
+        </div>
+      )}
+
+      <label style={labelStyle}>여행지 (메인)</label>
+      <input value={destinationName} onChange={(e) => setDestinationName(e.target.value)} placeholder="예: 큐슈 3박 4일" style={{ ...inputStyle, marginBottom: '12px' }} />
+
+      <label style={labelStyle}>여행지 (상세)</label>
+      <input value={destinationSub} onChange={(e) => setDestinationSub(e.target.value)} placeholder="예: 벳부·유후인·후쿠오카" style={{ ...inputStyle, marginBottom: '12px' }} />
+
+      <label style={labelStyle}>상단 라벨</label>
+      <input value={regionLabel} onChange={(e) => setRegionLabel(e.target.value)} placeholder="예: JAPAN AUTUMN 2026 · KYUSHU" style={{ ...inputStyle, marginBottom: '18px' }} />
 
       <div style={{ display: 'flex', gap: '6px' }}>
-        <button onClick={handleSave} style={primaryBtnStyle}>
-          <I.Save size={13} /> {mode === 'add' ? '추가' : '저장'}
-        </button>
+        <button onClick={handleSave} style={primaryBtnStyle}><I.Save size={13} /> 저장</button>
         <button onClick={onClose} style={secondaryBtnStyle}>취소</button>
       </div>
     </ModalOverlay>
@@ -1159,7 +1330,6 @@ function ShareModal({ onClose }) {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch (e) {
-      // Fallback
       const ta = document.createElement('textarea');
       ta.value = url;
       document.body.appendChild(ta);
@@ -1171,45 +1341,23 @@ function ShareModal({ onClose }) {
     }
   };
 
-  const kakaoShare = () => {
-    // 카카오톡 공유는 별도 SDK가 필요. 일단 링크 복사 후 안내.
-    copyLink();
-    alert('링크가 복사되었습니다. 카카오톡 가족방에 붙여넣기 하세요!');
-  };
-
   return (
     <ModalOverlay onClose={onClose}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '18px' }}>
         <h2 style={{ fontSize: '18px', fontWeight: 800, margin: 0, color: '#7C2D12' }}>🍁 가족에게 공유</h2>
         <button onClick={onClose} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '4px', color: '#6B7280' }}><I.X size={20} /></button>
       </div>
-
-      <p style={{ fontSize: '13px', color: '#6B7280', margin: '0 0 14px 0', lineHeight: 1.6 }}>
-        이 링크를 가족에게 공유하면 누구나 같은 페이지를 열어 함께 진행 상황을 관리할 수 있습니다.
-      </p>
-
-      <div style={{
-        padding: '12px 14px', background: '#FAFAF9',
-        border: '1px solid #E7E2D6', borderRadius: '10px',
-        fontFamily: 'monospace', fontSize: '12px', color: '#1F2937',
-        marginBottom: '12px', wordBreak: 'break-all',
-      }}>{url}</div>
-
+      <p style={{ fontSize: '13px', color: '#6B7280', margin: '0 0 14px 0', lineHeight: 1.6 }}>이 링크를 가족에게 공유하면 누구나 같은 페이지에서 함께 진행 상황을 관리할 수 있습니다.</p>
+      <div style={{ padding: '12px 14px', background: '#FAFAF9', border: '1px solid #E7E2D6', borderRadius: '10px', fontFamily: 'monospace', fontSize: '12px', color: '#1F2937', marginBottom: '12px', wordBreak: 'break-all' }}>{url}</div>
       <div style={{ display: 'flex', gap: '6px', marginBottom: '18px' }}>
-        <button onClick={copyLink} style={{ ...primaryBtnStyle, flex: 1, justifyContent: 'center' }}>
-          <I.Copy size={13} /> {copied ? '복사됨!' : '링크 복사'}
-        </button>
-        <button onClick={kakaoShare} style={{ ...secondaryBtnStyle, flex: 1, justifyContent: 'center', background: '#FEE500', color: '#3C1E1E', border: 'none', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
-          💬 카카오톡
-        </button>
+        <button onClick={copyLink} style={{ ...primaryBtnStyle, flex: 1, justifyContent: 'center' }}><I.Copy size={13} /> {copied ? '복사됨!' : '링크 복사'}</button>
+        <button onClick={copyLink} style={{ flex: 1, justifyContent: 'center', background: '#FEE500', color: '#3C1E1E', border: 'none', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px', padding: '10px 20px', fontSize: '14px', borderRadius: '14px', cursor: 'pointer' }}>💬 카카오톡</button>
       </div>
-
       <div style={{ padding: '14px', background: '#FEF3C7', borderRadius: '11px', border: '1px solid #FDE68A' }}>
         <h3 style={{ fontSize: '13px', fontWeight: 700, margin: '0 0 8px 0', color: '#7C2D12' }}>📱 폰에서 앱처럼 쓰기</h3>
         <ol style={{ fontSize: '12px', color: '#7C2D12', margin: 0, paddingLeft: '18px', lineHeight: 1.7 }}>
-          <li><b>iPhone</b>: Safari에서 열고 → 공유 아이콘 → "홈 화면에 추가"</li>
-          <li><b>Android</b>: Chrome에서 열고 → ⋮ 메뉴 → "홈 화면에 추가"</li>
-          <li>홈 화면에 칠순 여행 앱 아이콘이 생기고, 누르면 바로 열립니다</li>
+          <li><b>iPhone</b>: Safari → 공유 → "홈 화면에 추가"</li>
+          <li><b>Android</b>: Chrome → ⋮ → "홈 화면에 추가"</li>
         </ol>
       </div>
     </ModalOverlay>
@@ -1221,29 +1369,16 @@ function ModalOverlay({ children, onClose }) {
     const handleEsc = (e) => { if (e.key === 'Escape') onClose(); };
     window.addEventListener('keydown', handleEsc);
     document.body.style.overflow = 'hidden';
-    return () => {
-      window.removeEventListener('keydown', handleEsc);
-      document.body.style.overflow = '';
-    };
+    return () => { window.removeEventListener('keydown', handleEsc); document.body.style.overflow = ''; };
   }, [onClose]);
 
   return (
-    <div onClick={onClose} style={{
-      position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
-      backdropFilter: 'blur(4px)', zIndex: 1000,
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      padding: '16px', overflowY: 'auto',
-    }}>
-      <div onClick={(e) => e.stopPropagation()} style={{
-        background: 'white', borderRadius: '18px', padding: '22px',
-        maxWidth: '500px', width: '100%', maxHeight: '90vh', overflowY: 'auto',
-        boxShadow: '0 25px 60px rgba(0,0,0,0.25)', animation: 'fadeIn 0.2s ease-out',
-      }}>{children}</div>
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', overflowY: 'auto' }}>
+      <div onClick={(e) => e.stopPropagation()} style={{ background: 'white', borderRadius: '18px', padding: '22px', maxWidth: '500px', width: '100%', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 25px 60px rgba(0,0,0,0.25)', animation: 'fadeIn 0.2s ease-out' }}>{children}</div>
     </div>
   );
 }
 
-// ═══════════════════════════════════════════════════════════════════
 ReactDOM.createRoot(document.getElementById('root')).render(<App />);
 </script>
 </body>
