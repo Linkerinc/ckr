@@ -1,0 +1,1089 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>견적서 · 거래명세서 에디터 | 링커</title>
+<style>
+  @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css');
+
+  :root {
+    --bg: #f3f4f6;
+    --border: #d1d5db;
+    --text: #111827;
+    --muted: #6b7280;
+    --accent: #2563eb;
+    --accent-hover: #1d4ed8;
+    --danger: #dc2626;
+    --highlight: #fff3cd;
+    --hover-bg: #fffbe6;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', sans-serif; color: var(--text); }
+  body { background: var(--bg); min-height: 100vh; }
+
+  /* ────────────  Toolbar  ──────────── */
+  .toolbar {
+    position: sticky; top: 0; z-index: 100;
+    background: #fff; border-bottom: 1px solid var(--border);
+    padding: 10px 16px;
+    display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+  }
+  .toolbar .brand {
+    font-weight: 700; font-size: 14px; padding-right: 10px;
+    color: var(--text); letter-spacing: -0.2px;
+  }
+  .toolbar .brand small { color: var(--muted); font-weight: 500; margin-left: 4px; }
+  .tabs { display: inline-flex; background: #f3f4f6; padding: 3px; border-radius: 8px; gap: 2px; }
+  .tab {
+    padding: 6px 14px; border: none; background: transparent;
+    cursor: pointer; font-size: 13px; border-radius: 6px;
+    font-family: inherit; color: var(--muted); font-weight: 500;
+    transition: all .15s;
+  }
+  .tab.active { background: #fff; color: var(--text); box-shadow: 0 1px 2px rgba(0,0,0,0.08); }
+  .btn {
+    padding: 7px 12px; border: 1px solid var(--border); background: #fff;
+    cursor: pointer; font-size: 13px; border-radius: 6px;
+    font-family: inherit; color: var(--text);
+    transition: all .15s;
+    display: inline-flex; align-items: center; gap: 4px;
+  }
+  .btn:hover { background: #f9fafb; border-color: #9ca3af; }
+  .btn.primary { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
+  .btn.primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
+  .btn.danger { color: var(--danger); border-color: #fecaca; }
+  .btn.danger:hover { background: #fef2f2; }
+  .divider { width: 1px; height: 22px; background: #e5e7eb; margin: 0 2px; }
+  .stamp-controls { display: inline-flex; gap: 6px; align-items: center; padding: 0 4px; }
+  .stamp-controls label { font-size: 12px; color: var(--muted); }
+  .stamp-controls input[type=range] { width: 80px; }
+
+  /* ────────────  Document  ──────────── */
+  .doc-wrap { padding: 24px 16px 60px; display: flex; justify-content: center; }
+  .doc {
+    position: relative;
+    background: #fff;
+    width: 210mm;
+    min-height: 297mm;
+    padding: 16mm 14mm;
+    box-shadow: 0 4px 30px rgba(0,0,0,0.08);
+    font-size: 10.5pt;
+    color: #000;
+  }
+
+  .doc h1 {
+    text-align: center;
+    font-size: 22pt; font-weight: 700;
+    letter-spacing: 14pt; padding-left: 14pt;
+    margin-bottom: 18pt;
+    color: #000;
+  }
+
+  /* Common table */
+  table.tbl { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  table.tbl td, table.tbl th {
+    border: 1px solid #000;
+    padding: 3pt 5pt;
+    vertical-align: middle;
+    font-size: 10pt;
+    word-wrap: break-word;
+    line-height: 1.4;
+  }
+  .vlabel {
+    text-align: center;
+    vertical-align: middle;
+    font-weight: 600;
+    background: #fafafa;
+    font-size: 11pt;
+    line-height: 1.6;
+    padding: 0 2pt;
+    letter-spacing: 0;
+  }
+  .label {
+    background: #fafafa;
+    text-align: center;
+    font-weight: 500;
+    font-size: 9.5pt;
+  }
+  .center { text-align: center; }
+  .right { text-align: right; }
+  .bold { font-weight: 600; }
+
+  /* Editable inputs */
+  [contenteditable="true"] { outline: none; cursor: text; min-height: 1em; padding: 0 2px; }
+  [contenteditable="true"]:hover { background: var(--hover-bg); }
+  [contenteditable="true"]:focus { background: var(--highlight); }
+  input.cell, input.field {
+    border: none; outline: none; background: transparent;
+    font-family: inherit; font-size: inherit; color: inherit;
+    padding: 0 2px; width: 100%; line-height: 1.4;
+  }
+  input.field { padding: 2pt; }
+  input.cell.num, input.field.num { text-align: right; }
+  input.cell.center, input.field.center { text-align: center; }
+  input.cell:hover, input.field:hover { background: var(--hover-bg); }
+  input.cell:focus, input.field:focus { background: var(--highlight); }
+  /* Multi-line note cell */
+  textarea.cell-note {
+    border: none; outline: none; background: transparent;
+    width: 100%;
+    font-family: inherit; font-size: inherit; color: inherit;
+    padding: 0 2pt; margin: 0;
+    line-height: 1.4;
+    resize: none; overflow: hidden;
+    display: block; box-sizing: border-box;
+    min-height: 1.4em;
+    vertical-align: middle;
+  }
+  textarea.cell-note:hover { background: var(--hover-bg); }
+  textarea.cell-note:focus { background: var(--highlight); }
+  td.calc { text-align: right; background: #fcfcfc; color: #333; font-variant-numeric: tabular-nums; }
+  td.sum { text-align: right; background: #f5f5f5; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+  /* Notes textarea */
+  .notes-area {
+    width: 100%; border: none; outline: none; background: transparent;
+    font-family: inherit; font-size: 10pt; color: inherit;
+    resize: none; min-height: 50pt; line-height: 1.5; padding: 2pt;
+  }
+  .notes-area:hover { background: var(--hover-bg); }
+  .notes-area:focus { background: var(--highlight); }
+
+  /* Title (작성일자 etc.) - underline-stack matching original template */
+  .top-grid {
+    display: grid;
+    grid-template-columns: 78mm 102mm;
+    gap: 0 2mm;
+    margin-bottom: 6pt;
+  }
+  .left-stack {
+    min-width: 0;
+    display: flex; flex-direction: column;
+    border-top: 1px solid #000;
+  }
+  .ls-row {
+    border-bottom: 1px solid #000;
+    padding: 5pt 8pt;
+    min-height: 26pt;
+    display: flex; align-items: center;
+    font-size: 11pt; font-weight: 600;
+    gap: 3pt;
+  }
+  .ls-row.center { justify-content: center; }
+  .ls-row.right { justify-content: flex-end; }
+  .ls-row.intro { font-size: 10.5pt; font-weight: 500; color: #222; }
+  /* Override the .field width:100% inside .ls-row, use explicit widths via inline style */
+  .ls-row input.field {
+    width: auto;
+    min-width: 0;
+    font-weight: 600;
+    flex: 0 0 auto;
+    font-size: 11pt;
+  }
+  .ls-row .suffix { color: #000; flex: 0 0 auto; }
+  /* Supplier table column widths to fit 업태 and 광고대행업 fully */
+  table.supp-tbl { width: 100%; min-width: 0; }
+  table.supp-tbl col.c-vlabel { width: 20pt; }
+  table.supp-tbl col.c-lbl     { width: 46pt; }
+  table.supp-tbl col.c-val1    { width: auto; }
+  table.supp-tbl col.c-lbl2    { width: 24pt; }
+  table.supp-tbl col.c-val2    { width: 64pt; }
+
+  /* Stamp */
+  .stamp {
+    position: absolute;
+    cursor: move;
+    user-select: none;
+    z-index: 50;
+    border: 1px dashed transparent;
+  }
+  .stamp.editing { border-color: var(--accent); }
+  .stamp img {
+    display: block; width: 100%; height: 100%;
+    object-fit: contain;
+    pointer-events: none;
+  }
+  .stamp .resize-handle {
+    position: absolute; right: -7px; bottom: -7px;
+    width: 14px; height: 14px;
+    background: var(--accent); border: 2px solid #fff;
+    border-radius: 50%; cursor: nwse-resize;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  }
+  .stamp:not(.editing) .resize-handle { display: none; }
+
+  /* Floating row controls */
+  .row-control {
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 14px;
+    padding: 0 4px;
+  }
+  .row-control:hover { color: var(--danger); }
+
+  /* Footer info */
+  .doc-footer {
+    margin-top: 12pt;
+    text-align: center;
+    font-size: 9pt;
+    color: #555;
+  }
+
+  /* ────────────  Print  ──────────── */
+  @media print {
+    @page { size: A4; margin: 0; }
+    body { background: #fff; }
+    .toolbar, .row-actions-col, .row-control { display: none !important; }
+    .doc-wrap { padding: 0; }
+    .doc {
+      box-shadow: none; width: 210mm; min-height: 297mm;
+      padding: 16mm 14mm;
+    }
+    [contenteditable="true"]:hover, [contenteditable="true"]:focus { background: transparent !important; }
+    input.cell:hover, input.cell:focus, input.field:hover, input.field:focus,
+    .notes-area:hover, .notes-area:focus,
+    textarea.cell-note:hover, textarea.cell-note:focus { background: transparent !important; }
+    .stamp { border-color: transparent !important; }
+    .stamp .resize-handle { display: none !important; }
+    td.calc, td.sum { background: transparent !important; }
+    .label, .vlabel { background: transparent !important; }
+    /* Hide empty placeholder hint */
+    .print-hide { display: none !important; }
+  }
+
+  /* hint */
+  .hint {
+    background: #fffbeb; border-left: 3px solid #f59e0b;
+    padding: 10px 14px; margin: 16px auto; max-width: 210mm;
+    font-size: 12.5px; color: #78350f; border-radius: 4px;
+    line-height: 1.6;
+  }
+  .hint strong { color: #78350f; }
+  .hint kbd { background: #fff; padding: 1px 5px; border-radius: 3px; border: 1px solid #d1d5db; font-family: 'SF Mono', Consolas, monospace; font-size: 11px; }
+</style>
+</head>
+<body>
+
+<div class="toolbar">
+  <div class="brand">📄 견적서/거래명세서 에디터 <small>· 링커</small></div>
+  <div class="tabs">
+    <button class="tab active" data-tab="quote">견적서</button>
+    <button class="tab" data-tab="statement">거래명세서</button>
+  </div>
+  <div class="divider"></div>
+  <button class="btn" id="add-row">+ 행 추가</button>
+  <button class="btn" id="remove-row">− 마지막 행 제거</button>
+  <div class="divider"></div>
+  <label class="btn" for="stamp-upload">🔖 도장 업로드</label>
+  <input type="file" id="stamp-upload" accept="image/*" style="display:none">
+  <div class="stamp-controls" id="stamp-controls" style="display:none">
+    <label>크기</label>
+    <input type="range" id="stamp-size" min="40" max="200" value="90">
+    <button class="btn" id="stamp-remove" title="도장 제거">✕</button>
+  </div>
+  <div class="divider"></div>
+  <button class="btn" id="save-state" title="브라우저에 저장">💾 저장</button>
+  <button class="btn" id="load-state" title="저장된 데이터 불러오기">📂 불러오기</button>
+  <button class="btn danger" id="reset">초기화</button>
+  <div style="flex:1"></div>
+  <button class="btn primary" id="print">🖨️ PDF로 저장</button>
+</div>
+
+<div class="hint print-hide">
+  💡 모든 필드는 클릭해서 직접 수정할 수 있습니다. 도장 이미지는 업로드 후 드래그로 위치 조정, 우하단 파란 핸들로 크기 조정이 가능합니다.
+  PDF 저장은 <kbd>PDF로 저장</kbd> 버튼 → 인쇄 대화상자에서 <strong>대상: "PDF로 저장"</strong>을 선택하세요.
+</div>
+
+<div class="doc-wrap">
+  <div class="doc" id="doc">
+
+    <!-- ═══════════════════ 견적서 ═══════════════════ -->
+    <div id="view-quote">
+      <h1>견 적 서</h1>
+
+      <div class="top-grid">
+        <!-- Left: 작성일자 / 수신처 / 인사말 - underline stack -->
+        <div class="left-stack">
+          <div class="ls-row center">
+            <input class="field" id="q-date" value="2026년 05월 19일" style="text-align:center; width:160pt; font-weight:700;">
+          </div>
+          <div class="ls-row right">
+            <input class="field" id="q-recipient" value="한국3M" style="text-align:right; width:120pt;">
+            <span class="suffix">&nbsp;귀중</span>
+          </div>
+          <div class="ls-row right">
+            <input class="field" id="q-contact" value="주상현" style="text-align:right; width:120pt;">
+            <span class="suffix">&nbsp;귀하</span>
+          </div>
+          <div class="ls-row center intro">아래와 같이 견적 합니다.</div>
+        </div>
+
+        <!-- Right: 공급자 정보 -->
+        <table class="tbl supp-tbl">
+          <colgroup>
+            <col class="c-vlabel">
+            <col class="c-lbl">
+            <col class="c-val1">
+            <col class="c-lbl2">
+            <col class="c-val2">
+          </colgroup>
+          <tr>
+            <td rowspan="5" class="vlabel">공<br>급<br>자</td>
+            <td class="label">등록번호</td>
+            <td colspan="3"><input class="field" id="q-supp-reg" value="719-86-03240"></td>
+          </tr>
+          <tr>
+            <td class="label">상  호</td>
+            <td><input class="field" id="q-supp-name" value="링커(Linker)"></td>
+            <td class="label">성명</td>
+            <td style="position:relative">
+              <input class="field" id="q-supp-rep" value="차가람" style="padding-right: 22pt">
+              <span style="position:absolute; right:5pt; top:50%; transform:translateY(-50%); font-size:9pt; color:#888;">(인)</span>
+            </td>
+          </tr>
+          <tr>
+            <td class="label">사업장</td>
+            <td colspan="3"><input class="field" id="q-supp-addr" value="경기도 파주시 돌곶이길 129-7, 22호(서패동)"></td>
+          </tr>
+          <tr>
+            <td class="label">업  태</td>
+            <td><input class="field" id="q-supp-biz" value="전문,과학 및 기술서비스업"></td>
+            <td class="label">종목</td>
+            <td><input class="field" id="q-supp-item" value="광고 대행업"></td>
+          </tr>
+          <tr>
+            <td class="label">전화번호</td>
+            <td colspan="3"><input class="field" id="q-supp-tel" value="02-6465-2466"></td>
+          </tr>
+        </table>
+      </div>
+
+      <!-- 합계금액 -->
+      <table class="tbl" style="margin-bottom: 6pt;">
+        <tr>
+          <td class="label bold" style="width: 38%; padding: 8pt 6pt; font-size:11pt;">합계금액 (공급가액 + 세액)</td>
+          <td style="text-align: center; padding: 8pt 6pt;">
+            <span style="margin-right: 6pt;">○ 일 금 :</span>
+            <span class="bold" id="q-total-display" style="font-size: 12pt;">14,850,000</span>
+            <span style="margin-left: 6pt;">원정 (V.A.T 포함)</span>
+          </td>
+        </tr>
+      </table>
+
+      <!-- 품목 테이블 -->
+      <table class="tbl" id="q-items-table">
+        <thead>
+          <tr class="label">
+            <th style="width: 28%">품  명</th>
+            <th style="width: 7%">수 량</th>
+            <th style="width: 12%">단 가</th>
+            <th style="width: 15%">공 급 가 액</th>
+            <th style="width: 12%">세 액</th>
+            <th style="width: 26%">비  고</th>
+          </tr>
+        </thead>
+        <tbody id="q-items-body">
+          <!-- rows injected by JS -->
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="3" class="label bold center" style="padding: 6pt;">계</td>
+            <td class="sum" id="q-sum-supply">13,500,000</td>
+            <td class="sum" id="q-sum-tax">1,350,000</td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+
+      <!-- 참고사항 -->
+      <table class="tbl" style="margin-top: 6pt;">
+        <tr>
+          <td class="label" style="width: 50pt; text-align: center; vertical-align: middle;">참 고<br>사 항</td>
+          <td><textarea class="notes-area" id="q-notes" placeholder="참고사항을 입력하세요..."></textarea></td>
+        </tr>
+      </table>
+
+      <div class="doc-footer">
+        링커(Linker) · 경기도 파주시 돌곶이길 129-7, 22호 · TEL 02-6465-2466
+      </div>
+    </div>
+
+    <!-- ═══════════════════ 거래명세서 ═══════════════════ -->
+    <div id="view-statement" hidden>
+      <h1 style="letter-spacing: 10pt; padding-left: 10pt;">거래명세서</h1>
+
+      <div class="top-grid">
+        <div class="left-stack">
+          <div class="ls-row center">
+            <input class="field" id="s-date" value="2026년 05월 19일" style="text-align:center; width:160pt; font-weight:700;">
+          </div>
+          <div class="ls-row right">
+            <input class="field" id="s-recipient" value="한국3M" style="text-align:right; width:120pt;">
+            <span class="suffix">&nbsp;귀하</span>
+          </div>
+          <div class="ls-row right">
+            <input class="field" id="s-contact" value="" placeholder="담당자명" style="text-align:right; width:120pt;">
+            <span class="suffix">&nbsp;귀하</span>
+          </div>
+          <div class="ls-row center intro">아래와 같이 계산합니다.</div>
+        </div>
+
+        <table class="tbl supp-tbl">
+          <colgroup>
+            <col class="c-vlabel">
+            <col class="c-lbl">
+            <col class="c-val1">
+            <col class="c-lbl2">
+            <col class="c-val2">
+          </colgroup>
+          <tr>
+            <td rowspan="5" class="vlabel">공<br>급<br>자</td>
+            <td class="label">등록번호</td>
+            <td colspan="3"><input class="field" id="s-supp-reg" value="719-86-03240"></td>
+          </tr>
+          <tr>
+            <td class="label">상  호</td>
+            <td><input class="field" id="s-supp-name" value="링커(Linker)"></td>
+            <td class="label">성명</td>
+            <td style="position:relative">
+              <input class="field" id="s-supp-rep" value="차가람" style="padding-right: 22pt">
+              <span style="position:absolute; right:5pt; top:50%; transform:translateY(-50%); font-size:9pt; color:#888;">(인)</span>
+            </td>
+          </tr>
+          <tr>
+            <td class="label">사업장</td>
+            <td colspan="3"><input class="field" id="s-supp-addr" value="경기도 파주시 돌곶이길 129-7, 22호(서패동)"></td>
+          </tr>
+          <tr>
+            <td class="label">업  태</td>
+            <td><input class="field" id="s-supp-biz" value="전문,과학 및 기술서비스업"></td>
+            <td class="label">종목</td>
+            <td><input class="field" id="s-supp-item" value="광고 대행업"></td>
+          </tr>
+          <tr>
+            <td class="label">전화번호</td>
+            <td colspan="3"><input class="field" id="s-supp-tel" value="02-6465-2466"></td>
+          </tr>
+        </table>
+      </div>
+
+      <table class="tbl" style="margin-bottom: 6pt;">
+        <tr>
+          <td class="label bold" style="width: 38%; padding: 8pt 6pt; font-size:11pt;">합계금액 (공급가액 + 세액)</td>
+          <td style="text-align: center; padding: 8pt 6pt;">
+            <span style="margin-right: 6pt;">○ 일 금 :</span>
+            <span class="bold" id="s-total-display" style="font-size: 12pt;">0</span>
+            <span style="margin-left: 6pt;">원정 (V.A.T 포함)</span>
+          </td>
+        </tr>
+      </table>
+
+      <table class="tbl" id="s-items-table">
+        <thead>
+          <tr class="label">
+            <th style="width: 4%">월</th>
+            <th style="width: 4%">일</th>
+            <th style="width: 20%">품  목</th>
+            <th style="width: 9%">규 격</th>
+            <th style="width: 7%">수 량</th>
+            <th style="width: 12%">단 가</th>
+            <th style="width: 14%">공 급 가 액</th>
+            <th style="width: 11%">세 액</th>
+            <th style="width: 19%">비고</th>
+          </tr>
+        </thead>
+        <tbody id="s-items-body">
+          <!-- rows injected by JS -->
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colspan="6" class="label bold center" style="padding: 6pt;">계</td>
+            <td class="sum" id="s-sum-supply">0</td>
+            <td class="sum" id="s-sum-tax">0</td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+
+      <table class="tbl" style="margin-top: 6pt;">
+        <tr>
+          <td class="label" style="width: 50pt; text-align: center;">인수자</td>
+          <td style="padding: 10pt 6pt; position:relative;">
+            <input class="field" id="s-receiver" value="" placeholder="인수자 성명">
+            <span style="position:absolute; right:10pt; top:50%; transform:translateY(-50%); font-size:9pt; color:#888;">(인)</span>
+          </td>
+          <td class="label" style="width: 50pt; text-align: center;">참고</td>
+          <td><input class="field" id="s-notes" value="" placeholder="참고사항"></td>
+        </tr>
+      </table>
+
+      <div class="doc-footer">
+        링커(Linker) · 경기도 파주시 돌곶이길 129-7, 22호 · TEL 02-6465-2466
+      </div>
+    </div>
+
+    <!-- ═══════════════════ Stamp Overlay ═══════════════════ -->
+    <div class="stamp" id="stamp" hidden style="width: 90px; height: 90px; right: 100px; top: 130px;">
+      <img id="stamp-img" src="" alt="도장">
+      <div class="resize-handle"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+'use strict';
+
+/* ════════════════════════════════════════════════════════
+   STATE
+═══════════════════════════════════════════════════════════ */
+const TAX_RATE = 0.10;
+let currentTab = 'quote';
+
+const defaultQuoteItems = [
+  { name: '네이버 자동검색완성', qty: 1, price: 5892750, note: '' },
+  { name: '상위노출 SEM',         qty: 1, price: 7202250, note: '' },
+  { name: '운영비',               qty: 1, price: 405000,  note: '전체 금액의 3%' }
+];
+
+const defaultStatementItems = [
+  { month: '', day: '', name: '', spec: '', qty: '', price: '', note: '' }
+];
+
+let quoteItems = JSON.parse(JSON.stringify(defaultQuoteItems));
+let statementItems = JSON.parse(JSON.stringify(defaultStatementItems));
+
+/* ════════════════════════════════════════════════════════
+   UTILITY
+═══════════════════════════════════════════════════════════ */
+const fmt = n => {
+  if (n === '' || n === null || n === undefined || isNaN(n)) return '';
+  return Math.round(Number(n)).toLocaleString('ko-KR');
+};
+const num = v => {
+  if (v === '' || v === null || v === undefined) return 0;
+  const n = Number(String(v).replace(/,/g, ''));
+  return isNaN(n) ? 0 : n;
+};
+// Auto-resize a textarea to fit its content
+function autoResize(ta) {
+  if (!ta) return;
+  ta.style.height = 'auto';
+  ta.style.height = ta.scrollHeight + 'px';
+}
+
+/* ════════════════════════════════════════════════════════
+   QUOTE RENDERING
+═══════════════════════════════════════════════════════════ */
+function renderQuoteItems() {
+  const tbody = document.getElementById('q-items-body');
+  tbody.innerHTML = '';
+  const ROWS_MIN = 14;
+  const rows = Math.max(ROWS_MIN, quoteItems.length);
+
+  for (let i = 0; i < rows; i++) {
+    const it = quoteItems[i] || { name: '', qty: '', price: '', note: '' };
+    const supply = num(it.qty) * num(it.price);
+    const tax = Math.round(supply * TAX_RATE);
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input class="cell" data-idx="${i}" data-k="name" value="${escapeHtml(it.name)}"></td>
+      <td><input class="cell num" type="text" data-idx="${i}" data-k="qty" value="${it.qty}"></td>
+      <td><input class="cell num" type="text" data-idx="${i}" data-k="price" value="${it.price !== '' ? fmt(it.price) : ''}"></td>
+      <td class="calc" data-supply="${i}">${supply ? fmt(supply) : ''}</td>
+      <td class="calc" data-tax="${i}">${tax ? fmt(tax) : ''}</td>
+      <td><textarea class="cell-note" data-idx="${i}" data-k="note" rows="1">${escapeHtml(it.note)}</textarea></td>
+    `;
+    tbody.appendChild(tr);
+  }
+
+  attachQuoteListeners();
+  recalcQuote();
+}
+
+function attachQuoteListeners() {
+  document.querySelectorAll('#q-items-body input.cell').forEach(inp => {
+    inp.addEventListener('input', e => {
+      const idx = +e.target.dataset.idx;
+      const k = e.target.dataset.k;
+      while (quoteItems.length <= idx) quoteItems.push({ name:'', qty:'', price:'', note:'' });
+
+      if (k === 'qty' || k === 'price') {
+        const raw = e.target.value.replace(/,/g, '');
+        if (raw === '' || /^-?\d*\.?\d*$/.test(raw)) {
+          quoteItems[idx][k] = raw === '' ? '' : Number(raw);
+          if (k === 'price' && raw !== '') {
+            // re-format with commas after typing pause
+            const cursor = e.target.selectionStart;
+            e.target.value = fmt(Number(raw));
+          }
+        }
+      } else {
+        quoteItems[idx][k] = e.target.value;
+      }
+      recalcQuote();
+    });
+
+    inp.addEventListener('focus', e => {
+      if (e.target.dataset.k === 'price') {
+        e.target.value = e.target.value.replace(/,/g, '');
+      }
+    });
+    inp.addEventListener('blur', e => {
+      if (e.target.dataset.k === 'price' && e.target.value !== '') {
+        e.target.value = fmt(num(e.target.value));
+      }
+    });
+  });
+  // Multi-line 비고 textarea handlers
+  document.querySelectorAll('#q-items-body textarea.cell-note').forEach(ta => {
+    ta.addEventListener('input', e => {
+      const idx = +e.target.dataset.idx;
+      while (quoteItems.length <= idx) quoteItems.push({ name:'', qty:'', price:'', note:'' });
+      quoteItems[idx].note = e.target.value;
+      autoResize(ta);
+    });
+    autoResize(ta); // initial size based on existing content
+  });
+}
+
+function recalcQuote() {
+  let totalSupply = 0, totalTax = 0;
+  quoteItems.forEach((it, i) => {
+    const supply = num(it.qty) * num(it.price);
+    const tax = Math.round(supply * TAX_RATE);
+    totalSupply += supply;
+    totalTax += tax;
+    const sCell = document.querySelector(`[data-supply="${i}"]`);
+    const tCell = document.querySelector(`[data-tax="${i}"]`);
+    if (sCell) sCell.textContent = supply ? fmt(supply) : '';
+    if (tCell) tCell.textContent = tax ? fmt(tax) : '';
+  });
+  document.getElementById('q-sum-supply').textContent = fmt(totalSupply);
+  document.getElementById('q-sum-tax').textContent = fmt(totalTax);
+  document.getElementById('q-total-display').textContent = fmt(totalSupply + totalTax);
+}
+
+/* ════════════════════════════════════════════════════════
+   STATEMENT RENDERING
+═══════════════════════════════════════════════════════════ */
+function renderStatementItems() {
+  const tbody = document.getElementById('s-items-body');
+  tbody.innerHTML = '';
+  const ROWS_MIN = 14;
+  const rows = Math.max(ROWS_MIN, statementItems.length);
+
+  for (let i = 0; i < rows; i++) {
+    const it = statementItems[i] || { month:'', day:'', name:'', spec:'', qty:'', price:'', note:'' };
+    const supply = num(it.qty) * num(it.price);
+    const tax = Math.round(supply * TAX_RATE);
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input class="cell center" data-idx="${i}" data-k="month" value="${escapeHtml(it.month)}"></td>
+      <td><input class="cell center" data-idx="${i}" data-k="day" value="${escapeHtml(it.day)}"></td>
+      <td><input class="cell" data-idx="${i}" data-k="name" value="${escapeHtml(it.name)}"></td>
+      <td><input class="cell center" data-idx="${i}" data-k="spec" value="${escapeHtml(it.spec)}"></td>
+      <td><input class="cell num" type="text" data-idx="${i}" data-k="qty" value="${it.qty}"></td>
+      <td><input class="cell num" type="text" data-idx="${i}" data-k="price" value="${it.price !== '' ? fmt(it.price) : ''}"></td>
+      <td class="calc" data-s-supply="${i}">${supply ? fmt(supply) : ''}</td>
+      <td class="calc" data-s-tax="${i}">${tax ? fmt(tax) : ''}</td>
+      <td><textarea class="cell-note" data-idx="${i}" data-k="note" rows="1">${escapeHtml(it.note)}</textarea></td>
+    `;
+    tbody.appendChild(tr);
+  }
+
+  attachStatementListeners();
+  recalcStatement();
+}
+
+function attachStatementListeners() {
+  document.querySelectorAll('#s-items-body input.cell').forEach(inp => {
+    inp.addEventListener('input', e => {
+      const idx = +e.target.dataset.idx;
+      const k = e.target.dataset.k;
+      while (statementItems.length <= idx) statementItems.push({ month:'', day:'', name:'', spec:'', qty:'', price:'', note:'' });
+
+      if (k === 'qty' || k === 'price') {
+        const raw = e.target.value.replace(/,/g, '');
+        if (raw === '' || /^-?\d*\.?\d*$/.test(raw)) {
+          statementItems[idx][k] = raw === '' ? '' : Number(raw);
+          if (k === 'price' && raw !== '') {
+            e.target.value = fmt(Number(raw));
+          }
+        }
+      } else {
+        statementItems[idx][k] = e.target.value;
+      }
+      recalcStatement();
+    });
+    inp.addEventListener('focus', e => {
+      if (e.target.dataset.k === 'price') {
+        e.target.value = e.target.value.replace(/,/g, '');
+      }
+    });
+    inp.addEventListener('blur', e => {
+      if (e.target.dataset.k === 'price' && e.target.value !== '') {
+        e.target.value = fmt(num(e.target.value));
+      }
+    });
+  });
+  // Multi-line 비고 textarea handlers
+  document.querySelectorAll('#s-items-body textarea.cell-note').forEach(ta => {
+    ta.addEventListener('input', e => {
+      const idx = +e.target.dataset.idx;
+      while (statementItems.length <= idx) statementItems.push({ month:'', day:'', name:'', spec:'', qty:'', price:'', note:'' });
+      statementItems[idx].note = e.target.value;
+      autoResize(ta);
+    });
+    autoResize(ta);
+  });
+}
+
+function recalcStatement() {
+  let totalSupply = 0, totalTax = 0;
+  statementItems.forEach((it, i) => {
+    const supply = num(it.qty) * num(it.price);
+    const tax = Math.round(supply * TAX_RATE);
+    totalSupply += supply;
+    totalTax += tax;
+    const sCell = document.querySelector(`[data-s-supply="${i}"]`);
+    const tCell = document.querySelector(`[data-s-tax="${i}"]`);
+    if (sCell) sCell.textContent = supply ? fmt(supply) : '';
+    if (tCell) tCell.textContent = tax ? fmt(tax) : '';
+  });
+  document.getElementById('s-sum-supply').textContent = fmt(totalSupply);
+  document.getElementById('s-sum-tax').textContent = fmt(totalTax);
+  document.getElementById('s-total-display').textContent = fmt(totalSupply + totalTax);
+}
+
+/* ════════════════════════════════════════════════════════
+   ROW MANAGEMENT
+═══════════════════════════════════════════════════════════ */
+document.getElementById('add-row').addEventListener('click', () => {
+  if (currentTab === 'quote') {
+    quoteItems.push({ name: '', qty: '', price: '', note: '' });
+    renderQuoteItems();
+  } else {
+    statementItems.push({ month:'', day:'', name:'', spec:'', qty:'', price:'', note:'' });
+    renderStatementItems();
+  }
+});
+
+document.getElementById('remove-row').addEventListener('click', () => {
+  if (currentTab === 'quote') {
+    if (quoteItems.length > 1) {
+      quoteItems.pop();
+      renderQuoteItems();
+    }
+  } else {
+    if (statementItems.length > 1) {
+      statementItems.pop();
+      renderStatementItems();
+    }
+  }
+});
+
+/* ════════════════════════════════════════════════════════
+   TAB SWITCHING
+═══════════════════════════════════════════════════════════ */
+document.querySelectorAll('.tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentTab = btn.dataset.tab;
+    document.getElementById('view-quote').hidden = currentTab !== 'quote';
+    document.getElementById('view-statement').hidden = currentTab !== 'statement';
+  });
+});
+
+/* ════════════════════════════════════════════════════════
+   STAMP - upload, drag, resize
+═══════════════════════════════════════════════════════════ */
+const stamp = document.getElementById('stamp');
+const stampImg = document.getElementById('stamp-img');
+const stampControls = document.getElementById('stamp-controls');
+const stampSize = document.getElementById('stamp-size');
+const doc = document.getElementById('doc');
+
+document.getElementById('stamp-upload').addEventListener('change', e => {
+  const f = e.target.files[0];
+  if (!f) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    stampImg.src = ev.target.result;
+    stamp.hidden = false;
+    stamp.classList.add('editing');
+    stampControls.style.display = 'inline-flex';
+    // Default position: near supplier seal area
+    stamp.style.right = '';
+    stamp.style.bottom = '';
+    stamp.style.left = '480px';
+    stamp.style.top = '140px';
+    stamp.style.width = '90px';
+    stamp.style.height = '90px';
+    stampSize.value = 90;
+  };
+  reader.readAsDataURL(f);
+});
+
+document.getElementById('stamp-remove').addEventListener('click', () => {
+  stamp.hidden = true;
+  stampImg.src = '';
+  stampControls.style.display = 'none';
+  document.getElementById('stamp-upload').value = '';
+});
+
+stampSize.addEventListener('input', e => {
+  const v = +e.target.value;
+  stamp.style.width = v + 'px';
+  stamp.style.height = v + 'px';
+});
+
+// Click to toggle edit/lock mode
+stamp.addEventListener('click', e => {
+  if (e.target.classList.contains('resize-handle')) return;
+});
+
+// Dragging
+let dragging = false, resizing = false;
+let startX, startY, startLeft, startTop, startW, startH;
+
+stamp.addEventListener('mousedown', e => {
+  if (e.target.classList.contains('resize-handle')) {
+    resizing = true;
+    startX = e.clientX; startY = e.clientY;
+    startW = stamp.offsetWidth; startH = stamp.offsetHeight;
+    e.preventDefault();
+    return;
+  }
+  dragging = true;
+  stamp.classList.add('editing');
+  const rect = stamp.getBoundingClientRect();
+  const docRect = doc.getBoundingClientRect();
+  startX = e.clientX; startY = e.clientY;
+  startLeft = rect.left - docRect.left;
+  startTop = rect.top - docRect.top;
+  // Switch to left/top positioning
+  stamp.style.left = startLeft + 'px';
+  stamp.style.top = startTop + 'px';
+  stamp.style.right = '';
+  stamp.style.bottom = '';
+  e.preventDefault();
+});
+
+document.addEventListener('mousemove', e => {
+  if (dragging) {
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+    stamp.style.left = (startLeft + dx) + 'px';
+    stamp.style.top = (startTop + dy) + 'px';
+  } else if (resizing) {
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+    const delta = Math.max(dx, dy);
+    const newSize = Math.max(30, Math.min(300, startW + delta));
+    stamp.style.width = newSize + 'px';
+    stamp.style.height = newSize + 'px';
+    stampSize.value = Math.min(200, Math.max(40, newSize));
+  }
+});
+
+document.addEventListener('mouseup', () => {
+  dragging = false;
+  resizing = false;
+});
+
+// Touch support for mobile/tablet
+stamp.addEventListener('touchstart', e => {
+  const t = e.touches[0];
+  if (e.target.classList.contains('resize-handle')) {
+    resizing = true;
+    startX = t.clientX; startY = t.clientY;
+    startW = stamp.offsetWidth; startH = stamp.offsetHeight;
+    e.preventDefault();
+    return;
+  }
+  dragging = true;
+  stamp.classList.add('editing');
+  const rect = stamp.getBoundingClientRect();
+  const docRect = doc.getBoundingClientRect();
+  startX = t.clientX; startY = t.clientY;
+  startLeft = rect.left - docRect.left;
+  startTop = rect.top - docRect.top;
+  stamp.style.left = startLeft + 'px';
+  stamp.style.top = startTop + 'px';
+  stamp.style.right = '';
+  stamp.style.bottom = '';
+  e.preventDefault();
+}, { passive: false });
+
+document.addEventListener('touchmove', e => {
+  if (!dragging && !resizing) return;
+  const t = e.touches[0];
+  if (dragging) {
+    const dx = t.clientX - startX;
+    const dy = t.clientY - startY;
+    stamp.style.left = (startLeft + dx) + 'px';
+    stamp.style.top = (startTop + dy) + 'px';
+  } else if (resizing) {
+    const dx = t.clientX - startX;
+    const dy = t.clientY - startY;
+    const delta = Math.max(dx, dy);
+    const newSize = Math.max(30, Math.min(300, startW + delta));
+    stamp.style.width = newSize + 'px';
+    stamp.style.height = newSize + 'px';
+  }
+  e.preventDefault();
+}, { passive: false });
+
+document.addEventListener('touchend', () => {
+  dragging = false;
+  resizing = false;
+});
+
+// Click outside stamp to deselect (hide handle)
+document.addEventListener('click', e => {
+  if (!stamp.contains(e.target) && e.target.id !== 'stamp-upload' && !e.target.closest('#stamp-controls')) {
+    stamp.classList.remove('editing');
+  } else if (stamp.contains(e.target) && !e.target.classList.contains('resize-handle')) {
+    stamp.classList.add('editing');
+  }
+});
+
+/* ════════════════════════════════════════════════════════
+   SAVE / LOAD (localStorage)
+═══════════════════════════════════════════════════════════ */
+const STORAGE_KEY = 'linker_quote_editor_v1';
+
+function collectFields(prefix) {
+  const out = {};
+  document.querySelectorAll(`input.field[id^="${prefix}-"]`).forEach(el => {
+    out[el.id] = el.value;
+  });
+  return out;
+}
+function applyFields(data) {
+  if (!data) return;
+  Object.entries(data).forEach(([id, v]) => {
+    const el = document.getElementById(id);
+    if (el) el.value = v;
+  });
+}
+
+document.getElementById('save-state').addEventListener('click', () => {
+  const data = {
+    quoteFields: collectFields('q'),
+    statementFields: collectFields('s'),
+    quoteItems,
+    statementItems,
+    statementNotes: document.getElementById('s-notes').value,
+    statementReceiver: document.getElementById('s-receiver').value,
+    quoteNotes: document.getElementById('q-notes').value,
+    stamp: stamp.hidden ? null : {
+      src: stampImg.src,
+      left: stamp.style.left, top: stamp.style.top,
+      width: stamp.style.width, height: stamp.style.height
+    },
+    currentTab,
+    savedAt: new Date().toISOString()
+  };
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    flashToolbar('💾 저장되었습니다.');
+  } catch (err) {
+    alert('저장 실패: ' + err.message);
+  }
+});
+
+document.getElementById('load-state').addEventListener('click', () => {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) { alert('저장된 데이터가 없습니다.'); return; }
+    const data = JSON.parse(raw);
+    applyFields(data.quoteFields);
+    applyFields(data.statementFields);
+    if (data.quoteItems) quoteItems = data.quoteItems;
+    if (data.statementItems) statementItems = data.statementItems;
+    if (data.quoteNotes) document.getElementById('q-notes').value = data.quoteNotes;
+    if (data.statementNotes) document.getElementById('s-notes').value = data.statementNotes;
+    if (data.statementReceiver) document.getElementById('s-receiver').value = data.statementReceiver;
+    renderQuoteItems();
+    renderStatementItems();
+    if (data.stamp && data.stamp.src) {
+      stampImg.src = data.stamp.src;
+      stamp.hidden = false;
+      stamp.style.left = data.stamp.left;
+      stamp.style.top = data.stamp.top;
+      stamp.style.width = data.stamp.width;
+      stamp.style.height = data.stamp.height;
+      stampControls.style.display = 'inline-flex';
+    }
+    flashToolbar('📂 불러왔습니다. (저장: ' + new Date(data.savedAt).toLocaleString('ko-KR') + ')');
+  } catch (err) {
+    alert('불러오기 실패: ' + err.message);
+  }
+});
+
+document.getElementById('reset').addEventListener('click', () => {
+  if (!confirm('모든 입력을 초기 상태로 되돌립니다. 계속하시겠습니까?')) return;
+  location.reload();
+});
+
+function flashToolbar(msg) {
+  const brand = document.querySelector('.toolbar .brand');
+  const original = brand.innerHTML;
+  brand.innerHTML = msg;
+  brand.style.color = '#16a34a';
+  setTimeout(() => { brand.innerHTML = original; brand.style.color = ''; }, 1800);
+}
+
+/* ════════════════════════════════════════════════════════
+   PRINT
+═══════════════════════════════════════════════════════════ */
+document.getElementById('print').addEventListener('click', () => {
+  // Make sure stamp handle/border doesn't print
+  stamp.classList.remove('editing');
+  const prefix = currentTab === 'quote' ? 'q' : 's';
+  const date = (document.getElementById(prefix + '-date').value || '').replace(/[^\d]/g, '');
+  const recipient = (document.getElementById(prefix + '-recipient').value || '').replace(/[^\w가-힣]/g, '');
+  const type = currentTab === 'quote' ? '견적서' : '거래명세서';
+  document.title = `${type}_${recipient}_${date}_링커`;
+  setTimeout(() => window.print(), 100);
+});
+
+window.addEventListener('afterprint', () => {
+  document.title = '견적서 · 거래명세서 에디터 | 링커';
+});
+
+/* ════════════════════════════════════════════════════════
+   HELPERS
+═══════════════════════════════════════════════════════════ */
+function escapeHtml(s) {
+  if (s === undefined || s === null) return '';
+  return String(s).replace(/[&<>"']/g, m => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[m]));
+}
+
+/* ════════════════════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════════════════════ */
+// auto-fill today's date into both views (single field)
+const today = new Date();
+const todayStr = `${today.getFullYear()}년 ${String(today.getMonth() + 1).padStart(2,'0')}월 ${String(today.getDate()).padStart(2,'0')}일`;
+['q-date', 's-date'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.value = todayStr;
+});
+
+renderQuoteItems();
+renderStatementItems();
+</script>
+</body>
+</html>
